@@ -1,0 +1,710 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "LiveBrief API",
+    "summary": "Backend API for the LiveBrief newsroom verification workflow.",
+    "description": "LiveBrief compares multiple breaking-news sources, highlights conflicting claims, and generates final copy only from journalist-approved facts.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Health check",
+        "operationId": "health_check_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Check Api V1 Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analysis/demo": {
+      "get": {
+        "tags": [
+          "analysis"
+        ],
+        "summary": "Return a ready-to-run demo case",
+        "operationId": "get_demo_case_api_v1_analysis_demo_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyzeRequest"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analysis/run": {
+      "post": {
+        "tags": [
+          "analysis"
+        ],
+        "summary": "Analyze articles and compare source claims",
+        "operationId": "run_analysis_api_v1_analysis_run_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyzeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analysis/brief": {
+      "post": {
+        "tags": [
+          "analysis"
+        ],
+        "summary": "Generate a brief from journalist-approved claims",
+        "operationId": "generate_brief_api_v1_analysis_brief_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BriefRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BriefResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AnalysisResult": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "topic": {
+            "type": "string",
+            "title": "Topic"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceDocument"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "claims": {
+            "items": {
+              "$ref": "#/components/schemas/EventClaim"
+            },
+            "type": "array",
+            "title": "Claims"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/EventGroup"
+            },
+            "type": "array",
+            "title": "Groups"
+          },
+          "conflicts": {
+            "items": {
+              "$ref": "#/components/schemas/ConflictAlert"
+            },
+            "type": "array",
+            "title": "Conflicts"
+          },
+          "timeline": {
+            "items": {
+              "$ref": "#/components/schemas/EventClaim"
+            },
+            "type": "array",
+            "title": "Timeline"
+          },
+          "suggested_brief": {
+            "type": "string",
+            "title": "Suggested Brief"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "topic",
+          "sources",
+          "claims",
+          "groups",
+          "conflicts",
+          "timeline",
+          "suggested_brief"
+        ],
+        "title": "AnalysisResult"
+      },
+      "AnalyzeRequest": {
+        "properties": {
+          "topic": {
+            "type": "string",
+            "title": "Topic",
+            "examples": [
+              "Explosion reported near Central Station"
+            ]
+          },
+          "articles": {
+            "items": {
+              "$ref": "#/components/schemas/ArticleInput"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Articles"
+          }
+        },
+        "type": "object",
+        "required": [
+          "topic",
+          "articles"
+        ],
+        "title": "AnalyzeRequest"
+      },
+      "ArticleInput": {
+        "properties": {
+          "source_name": {
+            "type": "string",
+            "title": "Source Name",
+            "examples": [
+              "Source A"
+            ]
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text",
+            "description": "Raw article text. Use this for the 48-hour MVP and reliable demos."
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url",
+            "description": "Optional article URL. URL fetching can be implemented by the ingestion service."
+          },
+          "source_type": {
+            "type": "string",
+            "title": "Source Type",
+            "default": "article",
+            "examples": [
+              "Official brief"
+            ]
+          },
+          "received_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Received At",
+            "examples": [
+              "08:04"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_name"
+        ],
+        "title": "ArticleInput"
+      },
+      "BriefRequest": {
+        "properties": {
+          "topic": {
+            "type": "string",
+            "title": "Topic",
+            "examples": [
+              "Explosion reported near Central Station"
+            ]
+          },
+          "approved_claims": {
+            "items": {
+              "$ref": "#/components/schemas/EventClaim"
+            },
+            "type": "array",
+            "title": "Approved Claims",
+            "description": "Claims already validated by the journalist."
+          },
+          "include_unverified_context": {
+            "type": "boolean",
+            "title": "Include Unverified Context",
+            "description": "When true, the generator may mention that unresolved claims exist without asserting them.",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "topic"
+        ],
+        "title": "BriefRequest"
+      },
+      "BriefResponse": {
+        "properties": {
+          "topic": {
+            "type": "string",
+            "title": "Topic"
+          },
+          "brief": {
+            "type": "string",
+            "title": "Brief"
+          },
+          "used_claim_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Used Claim Ids"
+          },
+          "excluded_claim_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Excluded Claim Ids"
+          },
+          "safety_notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Safety Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "topic",
+          "brief",
+          "used_claim_ids",
+          "excluded_claim_ids",
+          "safety_notes"
+        ],
+        "title": "BriefResponse"
+      },
+      "ConflictAlert": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "group_id": {
+            "type": "string",
+            "title": "Group Id"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "title": "Severity"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "conflicting_values": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Conflicting Values"
+          },
+          "recommendation": {
+            "type": "string",
+            "title": "Recommendation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "group_id",
+          "severity",
+          "title",
+          "summary",
+          "recommendation"
+        ],
+        "title": "ConflictAlert"
+      },
+      "EventClaim": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "group_key": {
+            "type": "string",
+            "title": "Group Key"
+          },
+          "group_label": {
+            "type": "string",
+            "title": "Group Label"
+          },
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "source_name": {
+            "type": "string",
+            "title": "Source Name"
+          },
+          "field": {
+            "type": "string",
+            "title": "Field"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "claim": {
+            "type": "string",
+            "title": "Claim"
+          },
+          "evidence": {
+            "type": "string",
+            "title": "Evidence"
+          },
+          "time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          },
+          "action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action"
+          },
+          "numbers": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Numbers"
+          },
+          "confidence": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Confidence"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "confirmed",
+              "to_verify",
+              "ignored",
+              "add_to_brief"
+            ],
+            "title": "Status",
+            "default": "to_verify"
+          },
+          "risk": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "title": "Risk",
+            "default": "medium"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "group_key",
+          "group_label",
+          "source_id",
+          "source_name",
+          "field",
+          "value",
+          "claim",
+          "evidence",
+          "confidence"
+        ],
+        "title": "EventClaim"
+      },
+      "EventGroup": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "claims": {
+            "items": {
+              "$ref": "#/components/schemas/EventClaim"
+            },
+            "type": "array",
+            "title": "Claims"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "consistent",
+              "needs_review",
+              "conflict"
+            ],
+            "title": "Status"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "claims",
+          "status",
+          "summary"
+        ],
+        "title": "EventGroup"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "SourceDocument": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "source_type": {
+            "type": "string",
+            "title": "Source Type",
+            "default": "article"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "received_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Received At"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "text"
+        ],
+        "title": "SourceDocument"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "health",
+      "description": "Runtime health and service metadata."
+    },
+    {
+      "name": "analysis",
+      "description": "Article ingestion, event extraction, source comparison, conflict alerts, and approved-fact brief generation."
+    }
+  ]
+}
