@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 
 from app.core.config import Settings, get_settings
 from app.schemas.analysis import SourceDocument
-from app.schemas.article import AnalyzeRequest
+from app.schemas.article import AnalyzeRequest, ArticlePreviewResponse
 from app.utils.text import normalize_space, stable_id
 
 
@@ -50,7 +50,24 @@ class ArticleIngestionService:
             )
         return sources
 
+    def preview_url(self, url: str) -> ArticlePreviewResponse:
+        document = self._fetch_url_document(url)
+        text = document["text"][: self.settings.max_article_chars]
+        title = document["title"] or self._headline_from_text(text) or document["source_name"]
+        return ArticlePreviewResponse(
+            url=url,
+            final_url=document["final_url"],
+            source_name=document["source_name"],
+            title=title[:240],
+            text=text,
+            excerpt=self._excerpt(text),
+            word_count=len(text.split()),
+        )
+
     def _fetch_url_text(self, url: str) -> str:
+        return self._fetch_url_document(url)["text"]
+
+    def _fetch_url_document(self, url: str) -> dict[str, str]:
         self._assert_public_url(url)
         try:
             with httpx.Client(
@@ -64,7 +81,8 @@ class ArticleIngestionService:
             ) as client:
                 with client.stream("GET", url) as response:
                     response.raise_for_status()
-                    self._assert_public_url(str(response.url))
+                    final_url = str(response.url)
+                    self._assert_public_url(final_url)
                     content_type = response.headers.get("content-type", "").lower()
                     if not any(kind in content_type for kind in ("text/html", "text/plain", "application/xhtml")):
                         raise ArticleFetchError(f"Unsupported content type: {content_type or 'unknown'}.")
@@ -87,11 +105,12 @@ class ArticleIngestionService:
 
         extracted = trafilatura.extract(
             body,
-            url=url,
+            url=final_url,
             include_comments=False,
             include_tables=False,
             favor_precision=True,
         )
+        title, source_name = self._html_metadata(body, final_url)
         if not extracted:
             soup = BeautifulSoup(body, "html.parser")
             for tag in soup(["script", "style", "nav", "footer", "form"]):
@@ -102,7 +121,12 @@ class ArticleIngestionService:
             raise ArticleFetchError(
                 "No usable article body was found. Paste the article text instead."
             )
-        return text
+        return {
+            "final_url": final_url,
+            "source_name": source_name,
+            "title": title,
+            "text": text,
+        }
 
     def _assert_public_url(self, url: str) -> None:
         parsed = urlparse(url)
@@ -119,3 +143,39 @@ class ArticleIngestionService:
             ip = ipaddress.ip_address(address)
             if not ip.is_global:
                 raise ArticleFetchError("Private or local network addresses are not allowed.")
+
+    def _html_metadata(self, body: str, url: str) -> tuple[str, str]:
+        soup = BeautifulSoup(body, "html.parser")
+
+        def meta_value(*keys: str) -> str:
+            for key in keys:
+                tag = soup.find("meta", attrs={"property": key}) or soup.find(
+                    "meta",
+                    attrs={"name": key},
+                )
+                if tag:
+                    value = normalize_space(tag.get("content", ""))
+                    if value:
+                        return value
+            return ""
+
+        title = meta_value("og:title", "twitter:title")
+        if not title and soup.title and soup.title.string:
+            title = normalize_space(soup.title.string)
+
+        source_name = meta_value("og:site_name", "application-name")
+        if not source_name:
+            host = urlparse(url).hostname or "Article source"
+            source_name = host.removeprefix("www.")
+
+        return title, source_name
+
+    def _headline_from_text(self, text: str) -> str:
+        sentence = text.split(". ", 1)[0]
+        return normalize_space(sentence)[:140]
+
+    def _excerpt(self, text: str, limit: int = 900) -> str:
+        if len(text) <= limit:
+            return text
+        excerpt = text[:limit].rsplit(" ", 1)[0]
+        return f"{excerpt}..."

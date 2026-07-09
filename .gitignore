@@ -1,6 +1,7 @@
 node_modules
 dist
 .DS_Store
+.omc
 __pycache__
 .pytest_cache
 backend/.env

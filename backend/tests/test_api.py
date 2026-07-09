@@ -60,6 +60,31 @@ def test_invalid_article_url_is_rejected_by_schema():
     assert response.status_code == 422
 
 
+def test_preview_endpoint_returns_clean_article_metadata(monkeypatch):
+    monkeypatch.setattr(
+        analysis.pipeline.ingestion,
+        "_fetch_url_document",
+        lambda url: {
+            "final_url": "https://example.com/story",
+            "source_name": "Example News",
+            "title": "Storm closes the harbour",
+            "text": "Officials closed the harbour after heavy storm damage. Repairs are under way.",
+        },
+    )
+
+    response = client.post(
+        "/api/v1/analysis/preview",
+        json={"url": "https://example.com/story"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["title"] == "Storm closes the harbour"
+    assert payload["source_name"] == "Example News"
+    assert payload["word_count"] == 12
+    assert "Officials closed" in payload["excerpt"]
+
+
 def test_private_network_url_is_blocked():
     service = ArticleIngestionService()
 

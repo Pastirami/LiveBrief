@@ -43,6 +43,28 @@ Returns a ready-to-run demo payload for the frontend.
 
 Use this for a stable hackathon demo without depending on live scraping.
 
+### `POST /api/v1/analysis/preview`
+
+Crawls one public article URL and returns cleaned article text for editor
+confirmation before running AI extraction.
+
+Request body:
+
+```json
+{
+  "url": "https://example.com/public-article"
+}
+```
+
+Response fields:
+
+- `final_url`: final URL after redirects
+- `source_name`: site name or hostname
+- `title`: article title or first-line fallback
+- `text`: cleaned article body, capped by `MAX_ARTICLE_CHARS`
+- `excerpt`: short preview shown in the URL dialog
+- `word_count`: cleaned body word count
+
 ### `POST /api/v1/analysis/run`
 
 Analyzes sources and returns structured newsroom data.

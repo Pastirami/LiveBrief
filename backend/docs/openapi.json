@@ -60,6 +60,47 @@
         }
       }
     },
+    "/api/v1/analysis/preview": {
+      "post": {
+        "tags": [
+          "analysis"
+        ],
+        "summary": "Fetch and clean a public article URL before analysis",
+        "operationId": "preview_article_api_v1_analysis_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArticlePreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticlePreviewResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/analysis/run": {
       "post": {
         "tags": [
@@ -309,6 +350,63 @@
           "source_name"
         ],
         "title": "ArticleInput"
+      },
+      "ArticlePreviewRequest": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "title": "Url",
+            "description": "Public article URL to fetch and clean before analysis."
+          }
+        },
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "ArticlePreviewRequest"
+      },
+      "ArticlePreviewResponse": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "final_url": {
+            "type": "string",
+            "title": "Final Url"
+          },
+          "source_name": {
+            "type": "string",
+            "title": "Source Name"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "excerpt": {
+            "type": "string",
+            "title": "Excerpt"
+          },
+          "word_count": {
+            "type": "integer",
+            "title": "Word Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url",
+          "final_url",
+          "source_name",
+          "title",
+          "text",
+          "excerpt",
+          "word_count"
+        ],
+        "title": "ArticlePreviewResponse"
       },
       "BriefRequest": {
         "properties": {

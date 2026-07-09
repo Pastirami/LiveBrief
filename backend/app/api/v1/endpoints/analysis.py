@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.data.sample_case import get_sample_case
 from app.schemas.analysis import AnalysisResult
-from app.schemas.article import AnalyzeRequest
+from app.schemas.article import AnalyzeRequest, ArticlePreviewRequest, ArticlePreviewResponse
 from app.schemas.brief import BriefRequest, BriefResponse
 from app.services.analysis_pipeline import AnalysisPipeline
 from app.services.article_ingestion import ArticleFetchError
@@ -22,6 +22,18 @@ brief_generator = BriefGenerator(use_ai=False)
 )
 def get_demo_case() -> AnalyzeRequest:
     return get_sample_case()
+
+
+@router.post(
+    "/preview",
+    response_model=ArticlePreviewResponse,
+    summary="Fetch and clean a public article URL before analysis",
+)
+def preview_article(payload: ArticlePreviewRequest) -> ArticlePreviewResponse:
+    try:
+        return pipeline.ingestion.preview_url(payload.url)
+    except ArticleFetchError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.post(

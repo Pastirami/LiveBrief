@@ -3,6 +3,18 @@ from urllib.parse import urlparse
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 
+def validate_public_url_shape(value: str | None) -> str | None:
+    if value is None:
+        return None
+    value = value.strip()
+    parsed = urlparse(value)
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        raise ValueError("URL must be a public http:// or https:// address.")
+    if parsed.username or parsed.password:
+        raise ValueError("URLs containing credentials are not supported.")
+    return value
+
+
 class ArticleInput(BaseModel):
     source_name: str = Field(..., min_length=1, max_length=120, examples=["Source A"])
     text: str | None = Field(
@@ -25,15 +37,7 @@ class ArticleInput(BaseModel):
     @field_validator("url")
     @classmethod
     def validate_public_url_shape(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        value = value.strip()
-        parsed = urlparse(value)
-        if parsed.scheme not in {"http", "https"} or not parsed.hostname:
-            raise ValueError("URL must be a public http:// or https:// address.")
-        if parsed.username or parsed.password:
-            raise ValueError("URLs containing credentials are not supported.")
-        return value
+        return validate_public_url_shape(value)
 
     @model_validator(mode="after")
     def require_text_or_url(self):
@@ -57,3 +61,25 @@ class AnalyzeRequest(BaseModel):
     @classmethod
     def strip_topic(cls, value: str) -> str:
         return value.strip()
+
+
+class ArticlePreviewRequest(BaseModel):
+    url: str = Field(..., description="Public article URL to fetch and clean before analysis.")
+
+    @field_validator("url")
+    @classmethod
+    def validate_url(cls, value: str) -> str:
+        validated = validate_public_url_shape(value)
+        if validated is None:
+            raise ValueError("URL is required.")
+        return validated
+
+
+class ArticlePreviewResponse(BaseModel):
+    url: str
+    final_url: str
+    source_name: str
+    title: str
+    text: str
+    excerpt: str
+    word_count: int

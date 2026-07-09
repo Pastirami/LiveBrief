@@ -153,6 +153,7 @@ Only claims marked `confirmed` or `add_to_brief` are included.
 | --- | --- | --- |
 | `GET` | `/api/v1/health` | Service and AI readiness |
 | `GET` | `/api/v1/analysis/demo` | Stable demonstration payload |
+| `POST` | `/api/v1/analysis/preview` | Crawl and clean one public article URL |
 | `POST` | `/api/v1/analysis/run` | Ingest and compare reports |
 | `POST` | `/api/v1/analysis/brief` | Build an approved-fact brief |
 
