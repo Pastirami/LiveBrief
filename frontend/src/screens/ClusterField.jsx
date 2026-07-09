@@ -19,7 +19,10 @@ export default function ClusterField({
   cases,
   pendingCases = [],
   verdicts,
+  deckStates = {},
+  composingCaseId,
   onOpen,
+  onComposeDeck,
   animateIn,
   leavingId,
 }) {
@@ -30,6 +33,9 @@ export default function ClusterField({
         const ruled = newsCase.sources.filter((source) => verdicts[source.id]).length;
         const total = newsCase.sources.length;
         const done = ruled === total;
+        const deckState = deckStates[newsCase.case_id];
+        const hasBrief = Boolean(deckState?.brief);
+        const canCompose = done && onComposeDeck;
         const [x, y] = SLOTS[i % SLOTS.length];
         let className = "pile";
         if (done) className += " pile-done";
@@ -38,7 +44,7 @@ export default function ClusterField({
           className += leavingId === newsCase.case_id ? " pile-picked" : " pile-fading";
         }
         return (
-          <button
+          <div
             key={newsCase.case_id}
             className={className}
             style={{
@@ -49,34 +55,52 @@ export default function ClusterField({
               "--deal-delay": `${i * 0.12}s`,
               "--tilt": `${((i % 3) - 1) * 2.4}deg`,
             }}
-            onClick={(e) => onOpen(newsCase.case_id, e.currentTarget)}
-            aria-label={`Review ${newsCase.topic}: ${ruled} of ${total} articles ruled`}
           >
-            <span className="pile-sheet pile-sheet-b" aria-hidden="true" />
-            <span className="pile-sheet pile-sheet-a" aria-hidden="true" />
-            <span className="pile-front">
-              <span className="pile-kicker">Story {String(i + 1).padStart(2, "0")}</span>
-              <span className="pile-topic">{newsCase.topic}</span>
-              <span className="pile-count mono">
-                {done ? `${total} article cards ruled` : `${ruled}/${total} article cards`}
-              </span>
-              <span className="pile-badges">
-                {newsCase.conflicts.length > 0 && (
-                  <span className="risk risk-contested">
-                    {newsCase.conflicts.length} conflict{newsCase.conflicts.length > 1 ? "s" : ""}
+            <button
+              className="pile-hit"
+              onClick={(e) => onOpen(newsCase.case_id, e.currentTarget.closest(".pile"))}
+              aria-label={`Review ${newsCase.topic}: ${ruled} of ${total} articles ruled`}
+            >
+              <span className="pile-sheet pile-sheet-b" aria-hidden="true" />
+              <span className="pile-sheet pile-sheet-a" aria-hidden="true" />
+              <span className="pile-front">
+                <span className="pile-kicker">Story {String(i + 1).padStart(2, "0")}</span>
+                <span className="pile-topic">{newsCase.topic}</span>
+                <span className="pile-count mono">
+                  {done ? `${total} article cards ruled` : `${ruled}/${total} article cards`}
+                </span>
+                <span className="pile-badges">
+                  {deckState?.hasHolds && <span className="risk risk-medium">holds</span>}
+                  {newsCase.conflicts.length > 0 && (
+                    <span className="risk risk-contested">
+                      {newsCase.conflicts.length} conflict{newsCase.conflicts.length > 1 ? "s" : ""}
+                    </span>
+                  )}
+                </span>
+                <span className="pile-progress" aria-hidden="true">
+                  <span style={{ width: `${(ruled / total) * 100}%` }} />
+                </span>
+                {done && (
+                  <span className="pile-stamp" aria-hidden="true">
+                    Ruled
                   </span>
                 )}
               </span>
-              <span className="pile-progress" aria-hidden="true">
-                <span style={{ width: `${(ruled / total) * 100}%` }} />
-              </span>
-              {done && (
-                <span className="pile-stamp" aria-hidden="true">
-                  Ruled
-                </span>
-              )}
-            </span>
-          </button>
+            </button>
+            {canCompose && (
+              <button
+                type="button"
+                className="pile-compose"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onComposeDeck(newsCase);
+                }}
+                disabled={composingCaseId === newsCase.case_id}
+              >
+                {hasBrief ? "Brief" : composingCaseId === newsCase.case_id ? "..." : "Compose"}
+              </button>
+            )}
+          </div>
         );
       })}
       {pendingCases.map((pending, i) => {

@@ -7,12 +7,23 @@ import { Typewriter, dateline } from "../bits";
  * story's approved article cards. Uses the backend generator when reachable;
  * otherwise a local composer that follows the same no-invention rule.
  */
-export default function BriefView({ session, verdicts, onBackToDesk, onRestart }) {
+export default function BriefView({
+  session,
+  verdicts,
+  briefsOverride = null,
+  onBackToDesk,
+  onRestart,
+  title = "Dispatch",
+}) {
   const { cases } = session;
-  const [briefs, setBriefs] = useState(null); // [{ newsCase, response, live, approved, holds }]
+  const [briefs, setBriefs] = useState(briefsOverride); // [{ newsCase, response, live, approved, holds }]
   const [copiedId, setCopiedId] = useState(null);
 
   useEffect(() => {
+    if (briefsOverride) {
+      setBriefs(briefsOverride);
+      return;
+    }
     let cancelled = false;
     Promise.all(
       cases.map(async (newsCase) => {
@@ -33,7 +44,7 @@ export default function BriefView({ session, verdicts, onBackToDesk, onRestart }
     return () => {
       cancelled = true;
     };
-  }, [cases, verdicts]);
+  }, [briefsOverride, cases, verdicts]);
 
   const copy = async (brief) => {
     try {
@@ -52,11 +63,15 @@ export default function BriefView({ session, verdicts, onBackToDesk, onRestart }
           Back to the desk
         </button>
         <span className="topbar-center">
-          {cases.length > 1 ? `Dispatches · ${cases.length} stories` : "Dispatch"}
+          {cases.length > 1 ? `Dispatches · ${cases.length} stories` : title}
         </span>
-        <button className="btn-link" onClick={onRestart}>
-          New case
-        </button>
+        {onRestart ? (
+          <button className="btn-link" onClick={onRestart}>
+            New case
+          </button>
+        ) : (
+          <span className="mono">Saved brief</span>
+        )}
       </header>
 
       <main className="dispatch">
@@ -112,9 +127,11 @@ export default function BriefView({ session, verdicts, onBackToDesk, onRestart }
               <button className="btn btn-ghost" onClick={onBackToDesk}>
                 Revisit rulings
               </button>
-              <button className="btn btn-ghost" onClick={onRestart}>
-                Start a new case
-              </button>
+              {onRestart && (
+                <button className="btn btn-ghost" onClick={onRestart}>
+                  Start a new case
+                </button>
+              )}
             </div>
           </div>
         )}

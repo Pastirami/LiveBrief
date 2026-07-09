@@ -3,8 +3,9 @@ import ClaimCard from "./ClaimCard";
 import ClusterField from "./ClusterField";
 import SourceModal from "./SourceModal";
 import UrlStoryDialog from "./UrlStoryDialog";
-import { routeArticleToDeck, runPreviewAnalysis } from "../api";
-import { CountUp, SourceMark } from "../bits";
+import BriefView from "./BriefView";
+import { generateBrief, routeArticleToDeck, runPreviewAnalysis } from "../api";
+import { SourceMark } from "../bits";
 
 /**
  * The verification desk. The centre stage opens on the case board —
@@ -14,7 +15,7 @@ import { CountUp, SourceMark } from "../bits";
  * rail, the growing drafts on the right; both collapse into a bottom
  * sheet on small screens.
  */
-export default function Desk({ session, initialVerdicts, onCompose, onExit, onAddCase }) {
+export default function Desk({ session, initialVerdicts, onExit, onAddCase }) {
   const { cases, live } = session;
   const allClaims = useMemo(() => cases.flatMap((c) => c.claims), [cases]);
   const allArticles = useMemo(() => cases.flatMap((c) => c.sources), [cases]);
@@ -25,7 +26,7 @@ export default function Desk({ session, initialVerdicts, onCompose, onExit, onAd
   );
   const [command, setCommand] = useState(null);
   const [returningId, setReturningId] = useState(null);
-  const [sheet, setSheet] = useState(null); // 'draft' | 'sources' | null
+  const [sheet, setSheet] = useState(null); // 'draft' | 'sources' | 'briefs' | null
   const [activeCaseId, setActiveCaseId] = useState(null);
   const [leavingId, setLeavingId] = useState(null);
   const [introPlayed, setIntroPlayed] = useState(false);
@@ -35,6 +36,10 @@ export default function Desk({ session, initialVerdicts, onCompose, onExit, onAd
   const [pendingStories, setPendingStories] = useState([]);
   const [addingUrl, setAddingUrl] = useState(false);
   const [boardNotice, setBoardNotice] = useState("");
+  const [briefs, setBriefs] = useState({}); // case id -> generated brief record
+  const [briefBusyId, setBriefBusyId] = useState(null);
+  const [briefError, setBriefError] = useState("");
+  const [briefViewCaseId, setBriefViewCaseId] = useState(null);
   const seq = useRef(0);
   const stageRef = useRef(null);
   const pickTimer = useRef(null);
@@ -49,7 +54,6 @@ export default function Desk({ session, initialVerdicts, onCompose, onExit, onAd
   }, []);
 
   const canAddStories = Boolean(onAddCase);
-  const finished = allArticles.length > 0 && history.length >= allArticles.length;
   const emptyBoard = cases.length === 0 && pendingStories.length === 0;
 
   const sourceIndex = useMemo(() => {
@@ -97,8 +101,33 @@ export default function Desk({ session, initialVerdicts, onCompose, onExit, onAd
     return map;
   }, [cases]);
 
+  const deckStates = useMemo(() => {
+    const map = {};
+    for (const newsCase of cases) {
+      const unruled = newsCase.sources.filter((source) => !verdicts[source.id]);
+      const held = newsCase.sources.filter((source) => verdicts[source.id] === "to_verify");
+      const approved = newsCase.sources.filter((source) => verdicts[source.id] === "confirmed");
+      const discarded = newsCase.sources.filter((source) => verdicts[source.id] === "ignored");
+      map[newsCase.case_id] = {
+        unruled,
+        held,
+        approved,
+        discarded,
+        allRuled: newsCase.sources.length > 0 && unruled.length === 0,
+        hasHolds: held.length > 0,
+        brief: briefs[newsCase.case_id] || null,
+      };
+    }
+    return map;
+  }, [briefs, cases, verdicts]);
+
   const active = cases.find((c) => c.case_id === activeCaseId) || null;
-  const pending = active ? active.sources.filter((source) => !verdicts[source.id]) : [];
+  const activeDeckState = active ? deckStates[active.case_id] : null;
+  const pending = active
+    ? activeDeckState.unruled.length > 0
+      ? activeDeckState.unruled
+      : activeDeckState.held
+    : [];
   const ruledInActive = active ? active.sources.length - pending.length : 0;
 
   const counts = useMemo(() => {
@@ -144,7 +173,7 @@ export default function Desk({ session, initialVerdicts, onCompose, onExit, onAd
 
   const handleDecide = (id, status) => {
     setVerdicts((v) => ({ ...v, [id]: status }));
-    setHistory((h) => (h.includes(id) ? h : [...h, id]));
+    setHistory((h) => [...h.filter((item) => item !== id), id]);
     setReturningId(null);
   };
 
@@ -173,14 +202,6 @@ export default function Desk({ session, initialVerdicts, onCompose, onExit, onAd
     else if (homeCase) openCase(homeCase.case_id, null);
   };
 
-  // A finished story settles back onto the board on its own.
-  useEffect(() => {
-    if (activeCaseId && active && pending.length === 0) {
-      const timer = setTimeout(() => setActiveCaseId(null), 600);
-      return () => clearTimeout(timer);
-    }
-  }, [activeCaseId, active, pending.length]);
-
   useEffect(() => {
     const onKey = (e) => {
       if (e.target instanceof Element && e.target.closest("input, textarea")) return;
@@ -195,11 +216,45 @@ export default function Desk({ session, initialVerdicts, onCompose, onExit, onAd
     return () => window.removeEventListener("keydown", onKey);
   });
 
-  const compose = () => onCompose(verdicts);
-
   const openUrlDialog = () => {
     setBoardNotice("");
     setUrlDialogOpen(true);
+  };
+
+  const composeDeckBrief = async (newsCase) => {
+    if (!newsCase || briefBusyId) return;
+    const deckState = deckStates[newsCase.case_id];
+    if (!deckState?.allRuled) return;
+    if (deckState.brief) {
+      setBriefViewCaseId(newsCase.case_id);
+      return;
+    }
+
+    setBriefBusyId(newsCase.case_id);
+    setBriefError("");
+    try {
+      const approved = newsCase.claims.filter((claim) => verdicts[claim.source_id] === "confirmed");
+      const holds = newsCase.sources.filter((source) => verdicts[source.id] === "to_verify").length;
+      const { response, live: briefLive } = await generateBrief({
+        topic: newsCase.topic,
+        approved_claims: approved.map((claim) => ({ ...claim, status: "confirmed" })),
+        include_unverified_context: holds > 0,
+      });
+      const record = {
+        newsCase,
+        response,
+        live: briefLive,
+        approved,
+        holds,
+        createdAt: new Date().toISOString(),
+      };
+      setBriefs((current) => ({ ...current, [newsCase.case_id]: record }));
+      setBriefViewCaseId(newsCase.case_id);
+    } catch (err) {
+      setBriefError(err?.message || "The brief could not be generated.");
+    } finally {
+      setBriefBusyId(null);
+    }
   };
 
   const addPreviewToBoard = async (preview) => {
@@ -224,7 +279,17 @@ export default function Desk({ session, initialVerdicts, onCompose, onExit, onAd
         topic: targetCase ? targetCase.topic : route.topic,
         existingSources: targetCase?.sources || [],
       });
+      if (targetCase) {
+        setBriefs((current) => {
+          const next = { ...current };
+          delete next[targetCase.case_id];
+          return next;
+        });
+      }
       onAddCase(newsCase, true, targetCase?.case_id || null);
+      if (targetCase && activeCaseId === targetCase.case_id) {
+        setActiveCaseId(newsCase.case_id);
+      }
     } catch (err) {
       setBoardNotice(
         err?.message
@@ -317,6 +382,52 @@ export default function Desk({ session, initialVerdicts, onCompose, onExit, onAd
     </>
   );
 
+  const briefRecords = cases
+    .map((newsCase) => briefs[newsCase.case_id])
+    .filter(Boolean);
+
+  const briefList = (
+    <section>
+      <h4 className="rail-title">Briefs</h4>
+      {briefError && (
+        <p className="form-error" role="alert">
+          {briefError}
+        </p>
+      )}
+      {briefRecords.length === 0 ? (
+        <p className="rail-empty">No briefs composed yet.</p>
+      ) : (
+        <ul className="brief-list">
+          {briefRecords.map((brief) => (
+            <li key={brief.newsCase.case_id} className="brief-list-item">
+              <button className="brief-list-button" onClick={() => setBriefViewCaseId(brief.newsCase.case_id)}>
+                <span>{brief.newsCase.topic}</span>
+                <span className="mono">
+                  {brief.response.used_claim_ids.length} claims · {brief.holds} hold
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+
+  const openBrief = briefViewCaseId ? briefs[briefViewCaseId] : null;
+
+  if (openBrief) {
+    return (
+      <BriefView
+        session={{ cases: [openBrief.newsCase] }}
+        verdicts={verdicts}
+        briefsOverride={[openBrief]}
+        onBackToDesk={() => setBriefViewCaseId(null)}
+        onRestart={onExit}
+        title="Brief"
+      />
+    );
+  }
+
   return (
     <div className="page desk">
       <header className="topbar desk-topbar">
@@ -368,44 +479,6 @@ export default function Desk({ session, initialVerdicts, onCompose, onExit, onAd
                 Add URL
               </button>
             </div>
-          ) : finished ? (
-            <div className="deck-done">
-              <p className="kicker">Review complete</p>
-              <h3 className="done-title">Every article has been ruled on.</h3>
-              <dl className="done-figures">
-                <div>
-                  <dt>Approved</dt>
-                  <dd className="mono">
-                    <CountUp value={counts.confirmed} />
-                  </dd>
-                </div>
-                <div>
-                  <dt>On hold</dt>
-                  <dd className="mono">
-                    <CountUp value={counts.to_verify} />
-                  </dd>
-                </div>
-                <div>
-                  <dt>Discarded</dt>
-                  <dd className="mono">
-                    <CountUp value={counts.ignored} />
-                  </dd>
-                </div>
-              </dl>
-              <div className="done-actions">
-                <button className="btn btn-primary" onClick={compose}>
-                  Compose the briefs
-                </button>
-                <button className="btn btn-ghost" onClick={undo}>
-                  Revisit last ruling
-                </button>
-              </div>
-              {counts.confirmed === 0 && (
-                <p className="done-warning">
-                  Nothing is approved — every brief will say so, plainly.
-                </p>
-              )}
-            </div>
           ) : active ? (
             <div
               className="cluster-deck"
@@ -420,56 +493,104 @@ export default function Desk({ session, initialVerdicts, onCompose, onExit, onAd
                   {ruledInActive}&thinsp;/&thinsp;{active.sources.length}
                 </span>
               </div>
-              <div className="card-stack">
-                {stack.map((article, i) => (
-                  <ClaimCard
-                    key={article.id}
-                    article={article}
-                    claims={claimsBySource[article.id] || []}
-                    conflicts={conflictsBySource[article.id] || []}
-                    topic={active.topic}
-                    index={ruledInActive + i}
-                    total={active.sources.length}
-                    stackIndex={i}
-                    interactive={i === 0}
-                    command={i === 0 ? command : null}
-                    onDecide={handleDecide}
-                    onViewSource={openSource}
-                    returning={
-                      returningId && returningId.startsWith(`${article.id}:`)
-                        ? returningId.split(":")[1]
-                        : null
-                    }
-                  />
-                ))}
-                {stack.length === 0 && (
-                  <p className="deck-settling mono">Deck ruled — returning to the board</p>
-                )}
-              </div>
-              <div className="stage-controls">
-                <button className="ctl ctl-discard" onClick={() => requestDecide("ignored")}>
-                  <span className="ctl-key mono">&larr;</span> Discard
-                </button>
-                <button className="ctl ctl-hold" onClick={() => requestDecide("to_verify")}>
-                  <span className="ctl-key mono">&darr;</span> Hold
-                </button>
-                <button className="ctl ctl-approve" onClick={() => requestDecide("confirmed")}>
-                  Approve <span className="ctl-key mono">&rarr;</span>
-                </button>
-              </div>
-              <div className="stage-underline">
-                <button className="btn-link" onClick={undo} disabled={!canUndoHere}>
-                  Undo last ruling
-                </button>
-                <span className="mono stage-hint">drag article cards, arrows rule, esc closes</span>
-              </div>
+              {stack.length > 0 ? (
+                <>
+                  <div className="card-stack">
+                    {stack.map((article, i) => (
+                      <ClaimCard
+                        key={article.id}
+                        article={article}
+                        claims={claimsBySource[article.id] || []}
+                        conflicts={conflictsBySource[article.id] || []}
+                        topic={active.topic}
+                        index={active.sources.findIndex((source) => source.id === article.id)}
+                        total={active.sources.length}
+                        stackIndex={i}
+                        interactive={i === 0}
+                        command={i === 0 ? command : null}
+                        onDecide={handleDecide}
+                        onViewSource={openSource}
+                        returning={
+                          returningId && returningId.startsWith(`${article.id}:`)
+                            ? returningId.split(":")[1]
+                            : null
+                        }
+                      />
+                    ))}
+                  </div>
+                  <div className="stage-controls">
+                    <button className="ctl ctl-discard" onClick={() => requestDecide("ignored")}>
+                      <span className="ctl-key mono">&larr;</span> Discard
+                    </button>
+                    <button className="ctl ctl-hold" onClick={() => requestDecide("to_verify")}>
+                      <span className="ctl-key mono">&darr;</span> Hold
+                    </button>
+                    <button className="ctl ctl-approve" onClick={() => requestDecide("confirmed")}>
+                      Approve <span className="ctl-key mono">&rarr;</span>
+                    </button>
+                  </div>
+                  <div className="stage-underline">
+                    <button className="btn-link" onClick={undo} disabled={!canUndoHere}>
+                      Undo last ruling
+                    </button>
+                    <span className="mono stage-hint">
+                      {activeDeckState.unruled.length === 0 && activeDeckState.hasHolds
+                        ? "held article cards are back on the desk"
+                        : "drag article cards, arrows rule, esc closes"}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className="deck-done deck-done-local">
+                  <p className="kicker">Deck ruled</p>
+                  <h3 className="done-title">{active.topic}</h3>
+                  <dl className="done-figures">
+                    <div>
+                      <dt>Approved</dt>
+                      <dd className="mono">{activeDeckState.approved.length}</dd>
+                    </div>
+                    <div>
+                      <dt>On hold</dt>
+                      <dd className="mono">{activeDeckState.held.length}</dd>
+                    </div>
+                    <div>
+                      <dt>Discarded</dt>
+                      <dd className="mono">{activeDeckState.discarded.length}</dd>
+                    </div>
+                  </dl>
+                  <div className="done-actions">
+                    <button
+                      className="btn btn-primary btn-small"
+                      onClick={() => composeDeckBrief(active)}
+                      disabled={briefBusyId === active.case_id}
+                    >
+                      {activeDeckState.brief
+                        ? "View brief"
+                        : briefBusyId === active.case_id
+                          ? "Composing"
+                          : "Compose brief"}
+                    </button>
+                    <button className="btn btn-ghost btn-small" onClick={() => setActiveCaseId(null)}>
+                      Back to board
+                    </button>
+                  </div>
+                  {activeDeckState.hasHolds && (
+                    <p className="done-warning">
+                      Held article cards can be reopened from this deck on the board.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             <ClusterField
               cases={cases}
               pendingCases={pendingStories}
               verdicts={verdicts}
+              deckStates={deckStates}
+              composingCaseId={briefBusyId}
               onOpen={openCase}
+              onComposeDeck={composeDeckBrief}
               animateIn={!introPlayed}
               leavingId={leavingId}
             />
@@ -499,11 +620,7 @@ export default function Desk({ session, initialVerdicts, onCompose, onExit, onAd
               </li>
             </ul>
           </section>
-          {finished && (
-            <button className="btn btn-primary btn-block" onClick={compose}>
-              Compose the briefs
-            </button>
-          )}
+          {briefList}
         </aside>
       </div>
 
@@ -525,17 +642,20 @@ export default function Desk({ session, initialVerdicts, onCompose, onExit, onAd
         >
           Sources ({railCases.reduce((n, c) => n + c.sources.length, 0)})
         </button>
-        {finished && (
-          <button className="sheet-tab sheet-tab-on" onClick={compose}>
-            Compose
-          </button>
-        )}
+        <button
+          className={sheet === "briefs" ? "sheet-tab sheet-tab-on" : "sheet-tab"}
+          onClick={() => setSheet(sheet === "briefs" ? null : "briefs")}
+        >
+          Briefs ({briefRecords.length})
+        </button>
       </div>
 
       {sheet && (
         <div className="sheet" role="dialog" aria-label={sheet}>
           <div className="sheet-handle" onClick={() => setSheet(null)} />
-          <div className="sheet-body">{sheet === "draft" ? draftList : sourceList}</div>
+          <div className="sheet-body">
+            {sheet === "draft" ? draftList : sheet === "briefs" ? briefList : sourceList}
+          </div>
         </div>
       )}
 

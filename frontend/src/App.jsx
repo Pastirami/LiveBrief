@@ -2,12 +2,11 @@ import { useCallback, useState } from "react";
 import Landing from "./screens/Landing";
 import Analyzing from "./screens/Analyzing";
 import Desk from "./screens/Desk";
-import BriefView from "./screens/BriefView";
 
 /**
  * Screen flow:
- *   landing -> analyzing -> desk -> brief
- *   landing -> empty desk -> URL dialog -> desk -> brief
+ *   landing -> analyzing -> desk
+ *   landing -> empty desk -> URL dialog -> desk
  * `session.cases` holds one AnalysisResult per news topic; the demo
  * ships three unrelated stories, URL filing adds one crawled story at a time.
  */
@@ -47,11 +46,6 @@ export default function App() {
     }));
   }, []);
 
-  const handleCompose = useCallback((finalVerdicts) => {
-    setVerdicts(finalVerdicts);
-    setScreen("brief");
-  }, []);
-
   const reset = useCallback(() => {
     setJob(null);
     setSession(null);
@@ -69,18 +63,8 @@ export default function App() {
         <Desk
           session={session}
           initialVerdicts={verdicts}
-          onCompose={handleCompose}
           onExit={reset}
           onAddCase={session?.canAddStories ? handleAddCase : null}
-        />
-      );
-    case "brief":
-      return (
-        <BriefView
-          session={session}
-          verdicts={verdicts}
-          onBackToDesk={() => setScreen("desk")}
-          onRestart={reset}
         />
       );
     default:

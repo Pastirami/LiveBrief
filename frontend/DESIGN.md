@@ -66,8 +66,8 @@ Google Fonts 3종. 데이터는 영어이므로 라틴 조판 기준.
 ## 4. 화면 흐름
 
 ```
-Landing ─→ Analyzing ─→ Desk ─→ BriefView
-   └→ empty Desk ─→ UrlStoryDialog ─┘    ↑└─ 뒤로가기로 재검토 가능
+Landing ─→ Analyzing ─→ Desk ─→ BriefView(저장된 deck brief)
+   └→ empty Desk ─→ UrlStoryDialog ─┘    ↑└─ Back to the desk
 ```
 
 | 화면 | 파일 | 요지 |
@@ -76,7 +76,7 @@ Landing ─→ Analyzing ─→ Desk ─→ BriefView
 | Analyzing | `screens/Analyzing.jsx` | 파이프라인 5단계 체크리스트 연출 + 실제 API 호출 병행 |
 | Desk | `screens/Desk.jsx` | 검증 데스크, 빈 보드, URL 추가 진입 — 아래 5절 |
 | UrlStoryDialog | `screens/UrlStoryDialog.jsx` | URL-only 크롤링 미리보기 확인 후 분석/추가 |
-| BriefView | `screens/BriefView.jsx` | 최종 디스패치: 타자기 렌더링, 사용/제외/보류 수치, 세이프티 노트 |
+| BriefView | `screens/BriefView.jsx` | deck별 저장된 디스패치: 타자기 렌더링, 사용/제외/보류 수치, 세이프티 노트 |
 
 데모는 `api.js`가 번들된 목 케이스(`mock.js`)를 사용한다. 커스텀 URL 추가는
 백엔드 `/analysis/preview`로 먼저 크롤링/정제 결과를 확인한 뒤, `/analysis/route`로
@@ -207,7 +207,7 @@ frontend/
       UrlStoryDialog.jsx URL-only 크롤링 미리보기 + 분석 추가
       ClusterField.jsx  케이스 보드(토픽 더미)
       ClaimCard.jsx     기사 스와이프 카드(드래그 물리)
-      BriefView.jsx     최종 디스패치
+      BriefView.jsx     저장된 deck brief 재열람
 ```
 
 상태 소유권: 기사 카드 판정(`verdicts`, source id → status)과 판정 이력(`history`)은
