@@ -29,7 +29,7 @@ export default function App() {
   }, []);
 
   const handleAnalyzed = useCallback((nextSession) => {
-    setSession({ canAddStories: false, ...nextSession });
+    setSession({ canAddStories: true, ...nextSession });
     setVerdicts({});
     setScreen("desk");
   }, []);
@@ -41,7 +41,7 @@ export default function App() {
             item.case_id === replaceCaseId ? newsCase : item
           )
         : [...(current?.cases || []), newsCase],
-      live: current?.live ?? live,
+      live: Boolean(current?.live || live),
       canAddStories: current?.canAddStories ?? true,
     }));
   }, []);

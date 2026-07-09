@@ -25,7 +25,12 @@ export default function ClusterField({
   onComposeDeck,
   animateIn,
   leavingId,
+  absorb, // { caseId, title } — one-shot card tucking in behind its pile
+  newCaseId, // freshly created deck: deal it onto the board
 }) {
+  const absorbIndex = absorb
+    ? cases.findIndex((newsCase) => newsCase.case_id === absorb.caseId)
+    : -1;
   return (
     <div className="cluster-field">
       <p className="field-hint mono">Case board — pick up a story deck to review article cards</p>
@@ -41,7 +46,8 @@ export default function ClusterField({
         let className = "pile";
         if (done) className += " pile-done";
         if (incoming) className += " pile-route-target";
-        if (animateIn) className += " pile-deal";
+        if (animateIn || newsCase.case_id === newCaseId) className += " pile-deal";
+        if (absorb?.caseId === newsCase.case_id) className += " pile-absorb";
         if (leavingId) {
           className += leavingId === newsCase.case_id ? " pile-picked" : " pile-fading";
         }
@@ -111,34 +117,34 @@ export default function ClusterField({
           </div>
         );
       })}
-      {pendingCases
-        .filter((pending) => pending.targetCaseId)
-        .map((pending) => {
-          const targetIndex = cases.findIndex((newsCase) => newsCase.case_id === pending.targetCaseId);
-          if (targetIndex === -1) return null;
-          const [x, y] = SLOTS[targetIndex % SLOTS.length];
+      {absorbIndex >= 0 &&
+        (() => {
+          const [toX, toY] = SLOTS[absorbIndex % SLOTS.length];
+          const [fromX, fromY] = SLOTS[(absorb.fromIndex ?? cases.length) % SLOTS.length];
+          const tilt = ((absorbIndex % 3) - 1) * 2.4;
           return (
             <div
-              key={`${pending.id}-flight`}
-              className="route-flight"
+              key={`absorb-${absorb.caseId}`}
+              className="absorb-flight"
               style={{
-                "--target-x": `${x}%`,
-                "--target-y": `${y}%`,
+                "--from-x": `${fromX}%`,
+                "--from-y": `${fromY}%`,
+                "--to-x": `${toX}%`,
+                "--to-y": `${toY}%`,
+                "--tilt": `${tilt}deg`,
               }}
-              aria-live="polite"
+              aria-hidden="true"
             >
-              <span className="route-card">
-                <span className="pile-kicker">Routing</span>
-                <span>{pending.title}</span>
-                <span className="mono">
-                  {pending.targetTopic ? `into ${pending.targetTopic}` : pending.sourceName}
-                </span>
+              <span className="absorb-card">
+                <span className="pile-kicker">Filed</span>
+                <span className="absorb-title">{absorb.title}</span>
               </span>
             </div>
           );
-        })}
-      {pendingCases.filter((pending) => !pending.targetCaseId).map((pending, i) => {
+        })()}
+      {pendingCases.map((pending, i) => {
         const [x, y] = SLOTS[(cases.length + i) % SLOTS.length];
+        const routed = Boolean(pending.targetCaseId && pending.targetTopic);
         return (
           <div
             key={pending.id}
@@ -155,9 +161,15 @@ export default function ClusterField({
             <span className="pile-sheet pile-sheet-b" aria-hidden="true" />
             <span className="pile-sheet pile-sheet-a" aria-hidden="true" />
             <span className="pile-front">
-              <span className="pile-kicker">Reading</span>
+              <span className="pile-kicker">{routed ? "Routing" : "Reading"}</span>
               <span className="pile-topic">{pending.title}</span>
-              <span className="pile-count mono">{pending.sourceName || "Linked article"}</span>
+              <span className="pile-count mono">
+                {routed
+                  ? `into ${pending.targetTopic}${
+                      typeof pending.confidence === "number" ? ` · ${pending.confidence}%` : ""
+                    }`
+                  : pending.sourceName || "Linked article"}
+              </span>
               <span className="pile-badges">
                 <span className="risk risk-medium">
                   {pending.phase === "routing" ? "routing" : "analyzing"}

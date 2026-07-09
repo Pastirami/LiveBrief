@@ -35,8 +35,9 @@ export default function Desk({ session, initialVerdicts, onExit, onAddCase }) {
   const [viewSource, setViewSource] = useState(null); // { source, topic }
   const [urlDialogOpen, setUrlDialogOpen] = useState(false);
   const [pendingStories, setPendingStories] = useState([]);
-  const [addingUrl, setAddingUrl] = useState(false);
-  const [boardNotice, setBoardNotice] = useState("");
+  const [toasts, setToasts] = useState([]); // { id, text, tone }
+  const [absorb, setAbsorb] = useState(null); // { caseId, title } — card tucking behind a pile
+  const [newCaseId, setNewCaseId] = useState(null); // freshly created deck, deals onto the board
   const [briefs, setBriefs] = useState({}); // case id -> generated brief record
   const [briefBusyId, setBriefBusyId] = useState(null);
   const [briefError, setBriefError] = useState("");
@@ -44,6 +45,8 @@ export default function Desk({ session, initialVerdicts, onExit, onAddCase }) {
   const seq = useRef(0);
   const stageRef = useRef(null);
   const pickTimer = useRef(null);
+  const toastSeq = useRef(0);
+  const effectTimers = useRef([]);
 
   // The dealing-in animation runs once, when the board first opens.
   useEffect(() => {
@@ -51,8 +54,20 @@ export default function Desk({ session, initialVerdicts, onExit, onAddCase }) {
     return () => {
       clearTimeout(timer);
       clearTimeout(pickTimer.current);
+      effectTimers.current.forEach(clearTimeout);
     };
   }, []);
+
+  const after = (ms, fn) => {
+    effectTimers.current.push(setTimeout(fn, ms));
+  };
+
+  const pushToast = (text, tone = "ok") => {
+    toastSeq.current += 1;
+    const id = toastSeq.current;
+    setToasts((items) => [...items, { id, text, tone }]);
+    after(4200, () => setToasts((items) => items.filter((item) => item.id !== id)));
+  };
 
   const canAddStories = Boolean(onAddCase);
   const emptyBoard = cases.length === 0 && pendingStories.length === 0;
@@ -218,7 +233,6 @@ export default function Desk({ session, initialVerdicts, onExit, onAddCase }) {
   });
 
   const openUrlDialog = () => {
-    setBoardNotice("");
     setUrlDialogOpen(true);
   };
 
@@ -262,8 +276,9 @@ export default function Desk({ session, initialVerdicts, onExit, onAddCase }) {
   const addPreviewToBoard = async (preview) => {
     const pendingId = `pending-${Date.now()}`;
     const pendingTitle = preview.title || preview.source_name || "Linked article";
-    setAddingUrl(true);
-    setBoardNotice("");
+    // Slot the pending pile occupies on the board — the absorb flight
+    // starts from there so the analyzing deck glides into its target.
+    const pendingSlotIndex = cases.length + pendingStories.length;
     setUrlDialogOpen(false);
     setPendingStories((items) => [
       ...items,
@@ -313,22 +328,30 @@ export default function Desk({ session, initialVerdicts, onExit, onAddCase }) {
       if (targetCase && activeCaseId === targetCase.case_id) {
         setActiveCaseId(newsCase.case_id);
       }
-      setBoardNotice(
-        targetCase
-          ? `Article routed into "${targetCase.topic}".${
-              invalidatedBrief ? " The old brief was removed because the deck changed." : ""
-            }`
-          : `New story deck created: "${newsCase.topic}".`
-      );
+      if (targetCase) {
+        // One-shot flight: the analyzing deck glides over and tucks in
+        // behind its target pile.
+        setAbsorb({ caseId: newsCase.case_id, title: pendingTitle, fromIndex: pendingSlotIndex });
+        after(1600, () => setAbsorb(null));
+        pushToast(
+          `Article routed into "${targetCase.topic}".${
+            invalidatedBrief ? " The old brief was removed because the deck changed." : ""
+          }`
+        );
+      } else {
+        setNewCaseId(newsCase.case_id);
+        after(1600, () => setNewCaseId(null));
+        pushToast(`New story deck created: "${newsCase.topic}".`);
+      }
     } catch (err) {
-      setBoardNotice(
+      pushToast(
         err?.message
           ? `The source was crawled, but routing or analysis failed: ${err.message}`
-          : "The source was crawled, but routing or analysis failed."
+          : "The source was crawled, but routing or analysis failed.",
+        "error"
       );
     } finally {
       setPendingStories((items) => items.filter((item) => item.id !== pendingId));
-      setAddingUrl(false);
     }
   };
 
@@ -501,11 +524,6 @@ export default function Desk({ session, initialVerdicts, onExit, onAddCase }) {
         <aside className="rail rail-left">{sourceList}</aside>
 
         <main className="stage" ref={stageRef}>
-          {boardNotice && !emptyBoard && (
-            <p className="board-notice" role="status">
-              {boardNotice}
-            </p>
-          )}
           {emptyBoard ? (
             <div className="empty-board">
               <p className="kicker">Case board</p>
@@ -514,11 +532,6 @@ export default function Desk({ session, initialVerdicts, onExit, onAddCase }) {
                 LiveBrief will crawl the article, show the cleaned text for confirmation,
                 then route it into a matching story deck or create a new one.
               </p>
-              {boardNotice && (
-                <p className="form-error empty-error" role="alert">
-                  {boardNotice}
-                </p>
-              )}
               <button className="btn btn-primary" onClick={openUrlDialog}>
                 Add URL
               </button>
@@ -638,6 +651,8 @@ export default function Desk({ session, initialVerdicts, onExit, onAddCase }) {
               onComposeDeck={composeDeckBrief}
               animateIn={!introPlayed}
               leavingId={leavingId}
+              absorb={absorb}
+              newCaseId={newCaseId}
             />
           )}
         </main>
@@ -735,9 +750,19 @@ export default function Desk({ session, initialVerdicts, onExit, onAddCase }) {
         open={urlDialogOpen}
         onClose={() => setUrlDialogOpen(false)}
         onConfirm={addPreviewToBoard}
-        busy={addingUrl}
-        error={boardNotice}
+        busy={false}
+        error=""
       />
+
+      {toasts.length > 0 && (
+        <div className="toast-rack" aria-live="polite">
+          {toasts.map((toast) => (
+            <p key={toast.id} className={toast.tone === "error" ? "toast toast-error" : "toast"} role="status">
+              {toast.text}
+            </p>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
