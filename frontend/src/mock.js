@@ -40,7 +40,7 @@ const CASES_RAW = [
         url: null,
         received_at: "06:55",
         text:
-          "At least six people were injured after what witnesses describe as an airstrike hit the eastern warehouse row around 06:20, Harbour Watch has learned. Three residents of the adjacent Fisherman's Quarter told our reporter they heard a drone overhead moments before the blast. Emergency crews remain on the scene and the extent of the damage is not yet clear.",
+          "At least six people were injured after what witnesses describe as an airstrike hit Port Kessa's eastern warehouse row around 06:20, Harbour Watch has learned. Three residents of the Fisherman's Quarter beside the harbour told our reporter they heard a drone overhead moments before the explosion. Emergency crews remain at the warehouse district and the extent of the damage to the port is not yet clear.",
       },
       {
         id: "pk-src-defence",
@@ -126,7 +126,7 @@ const CASES_RAW = [
         value: "6",
         claim: "At least six people were injured, according to local media.",
         evidence:
-          "At least six people were injured after what witnesses describe as an airstrike hit the eastern warehouse row around 06:20.",
+          "At least six people were injured after what witnesses describe as an airstrike hit Port Kessa's eastern warehouse row around 06:20.",
         numbers: { injured: 6 },
         confidence: 61,
         risk: "high",
@@ -156,7 +156,7 @@ const CASES_RAW = [
         value: "drone (witnesses)",
         claim: "Witnesses report hearing a drone moments before the blast.",
         evidence:
-          "Three residents of the adjacent Fisherman's Quarter told our reporter they heard a drone overhead moments before the blast.",
+          "Three residents of the Fisherman's Quarter beside the harbour told our reporter they heard a drone overhead moments before the explosion.",
         confidence: 48,
         risk: "critical",
       }),
@@ -273,7 +273,7 @@ const CASES_RAW = [
         url: null,
         received_at: "10:15",
         text:
-          "The Monetary Policy Committee will announce its rate decision on Thursday. In prepared remarks, Governor Ilse Maren said the bank is prepared to take decisive action to anchor expectations, and that a return to the 2 percent target remains the committee's overriding objective.",
+          "Responding to June's 9.4 percent consumer price inflation reading, the Central Bank of Veltria said the Monetary Policy Committee will announce its rate decision on Thursday. In prepared remarks, Governor Ilse Maren said the bank is prepared to take decisive action to bring Veltria's inflation back to the 2 percent price target, which remains the committee's overriding objective.",
       },
       {
         id: "vl-src-analysts",
@@ -282,7 +282,7 @@ const CASES_RAW = [
         url: null,
         received_at: "10:40",
         text:
-          "Market economists are split ahead of Thursday's decision. Of fourteen desks surveyed, eight expect a 50 basis point hike and six expect 100 basis points. Swap markets price roughly 70 basis points. Several notes flag the independent 11 percent inflation estimate as a risk to the central bank's credibility if Thursday's move is seen as timid.",
+          "Market economists are split over how hard Veltria's central bank should lean against 9.4 percent consumer price inflation at Thursday's rate decision. Of fourteen desks surveyed, eight expect a 50 basis point hike and six expect 100 basis points. Swap markets price roughly 70 basis points. Several notes flag the independent 11 percent inflation estimate as a risk to the central bank's credibility if Thursday's move is seen as timid.",
       },
       {
         id: "vl-src-street",
@@ -291,7 +291,7 @@ const CASES_RAW = [
         url: null,
         received_at: "11:05",
         text:
-          "A bread loaf that cost 40 crowns in March now sells for 47 in the capital's central markets, an 18 percent rise in three months, according to our weekly street price survey. Retailers interviewed blame diesel costs and a weak harvest. Two of five stall owners said they expect further increases before autumn.",
+          "Food price inflation is visible on every stall in the Veltrian capital: a bread loaf that cost 40 crowns in March now sells for 47 in the central markets, an 18 percent rise in three months, according to our weekly survey of consumer prices. Retailers interviewed blame diesel costs and a weak harvest. Two of five stall owners said they expect further price rises before autumn.",
       },
     ],
     claims: [
@@ -349,7 +349,7 @@ const CASES_RAW = [
         value: "bread +18% in 3 months",
         claim: "Bread prices in the capital rose 18 percent in three months.",
         evidence:
-          "A bread loaf that cost 40 crowns in March now sells for 47 in the capital's central markets, an 18 percent rise in three months.",
+          "A bread loaf that cost 40 crowns in March now sells for 47 in the central markets, an 18 percent rise in three months, according to our weekly survey of consumer prices.",
         numbers: { bread_3m: 18 },
         confidence: 74,
         risk: "medium",
@@ -364,7 +364,7 @@ const CASES_RAW = [
         value: "decision Thursday",
         claim: "The central bank announces its rate decision on Thursday.",
         evidence:
-          "The Monetary Policy Committee will announce its rate decision on Thursday.",
+          "Responding to June's 9.4 percent consumer price inflation reading, the Central Bank of Veltria said the Monetary Policy Committee will announce its rate decision on Thursday.",
         confidence: 96,
         risk: "low",
       }),
@@ -479,7 +479,7 @@ const CASES_RAW = [
         url: null,
         received_at: "14:35",
         text:
-          "Tram and commuter rail service is suspended on lines N1, N3 and N4 due to the power failure. Replacement buses are being arranged on the busiest sections. The authority expects service to resume by early evening, subject to grid restoration.",
+          "Tram and commuter rail service is suspended on lines N1, N3 and N4 after the power failure at the Halden substation blacked out the Northern Corridor, the transit authority said. Replacement buses are being arranged on the busiest sections. The authority expects service to resume by early evening, subject to power grid restoration.",
       },
       {
         id: "nc-src-ministry",
@@ -587,7 +587,7 @@ const CASES_RAW = [
         value: "3 lines suspended",
         claim: "Tram and commuter rail are suspended on lines N1, N3 and N4.",
         evidence:
-          "Tram and commuter rail service is suspended on lines N1, N3 and N4 due to the power failure.",
+          "Tram and commuter rail service is suspended on lines N1, N3 and N4 after the power failure at the Halden substation blacked out the Northern Corridor.",
         confidence: 92,
         risk: "low",
       }),
@@ -601,7 +601,7 @@ const CASES_RAW = [
         value: "by early evening (transit)",
         claim: "Transit service is expected to resume by early evening.",
         evidence:
-          "The authority expects service to resume by early evening, subject to grid restoration.",
+          "The authority expects service to resume by early evening, subject to power grid restoration.",
         confidence: 63,
         risk: "medium",
       }),
