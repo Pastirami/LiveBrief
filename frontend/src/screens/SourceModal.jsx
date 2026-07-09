@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { SourceMark } from "../bits";
 
-/** Full original report, presented as a filed document. */
+/** Cleaned article body, presented as a filed source document. */
 export default function SourceModal({ source, topic, onClose }) {
   useEffect(() => {
     const onKey = (e) => {
@@ -21,12 +21,12 @@ export default function SourceModal({ source, topic, onClose }) {
       <article
         className="modal-sheet"
         role="dialog"
-        aria-label={`Original report from ${source.name}`}
+        aria-label={`Cleaned source text from ${source.name}`}
         onClick={(e) => e.stopPropagation()}
       >
         <header className="modal-head">
           <div>
-            <p className="kicker">Original report</p>
+            <p className="kicker">Cleaned source text</p>
             <h3 className="modal-source">
               <SourceMark name={source.name} url={source.url} size={26} />
               {source.name}
@@ -42,6 +42,10 @@ export default function SourceModal({ source, topic, onClose }) {
           </button>
         </header>
         <div className="modal-rule" aria-hidden="true" />
+        <p className="modal-note">
+          This is the crawled article body after navigation, ads and boilerplate are removed.
+          Use the filed URL below when you need to inspect the publisher page.
+        </p>
         <p className="modal-body">{source.text}</p>
         {source.url && (
           <p className="mono modal-link">

@@ -27,6 +27,7 @@ export default function Desk({ session, initialVerdicts, onExit, onAddCase }) {
   const [command, setCommand] = useState(null);
   const [returningId, setReturningId] = useState(null);
   const [sheet, setSheet] = useState(null); // 'draft' | 'sources' | 'briefs' | null
+  const [railTab, setRailTab] = useState("drafts");
   const [activeCaseId, setActiveCaseId] = useState(null);
   const [leavingId, setLeavingId] = useState(null);
   const [introPlayed, setIntroPlayed] = useState(false);
@@ -249,6 +250,7 @@ export default function Desk({ session, initialVerdicts, onExit, onAddCase }) {
         createdAt: new Date().toISOString(),
       };
       setBriefs((current) => ({ ...current, [newsCase.case_id]: record }));
+      setRailTab("briefs");
       setBriefViewCaseId(newsCase.case_id);
     } catch (err) {
       setBriefError(err?.message || "The brief could not be generated.");
@@ -259,26 +261,47 @@ export default function Desk({ session, initialVerdicts, onExit, onAddCase }) {
 
   const addPreviewToBoard = async (preview) => {
     const pendingId = `pending-${Date.now()}`;
+    const pendingTitle = preview.title || preview.source_name || "Linked article";
     setAddingUrl(true);
     setBoardNotice("");
+    setUrlDialogOpen(false);
+    setPendingStories((items) => [
+      ...items,
+      {
+        id: pendingId,
+        title: pendingTitle,
+        sourceName: "Finding matching story deck",
+        phase: "routing",
+      },
+    ]);
     try {
       const route = await routeArticleToDeck(preview, cases);
       const targetCase = route.target_case_id
         ? cases.find((newsCase) => newsCase.case_id === route.target_case_id)
         : null;
-      setPendingStories((items) => [
-        ...items,
-        {
-          id: pendingId,
-          title: route.topic || preview.title || preview.source_name || "Linked article",
-          sourceName: targetCase ? `Adding to ${targetCase.topic}` : preview.source_name,
-        },
-      ]);
-      setUrlDialogOpen(false);
+      setPendingStories((items) =>
+        items.map((item) =>
+          item.id === pendingId
+            ? {
+                ...item,
+                title: route.topic || pendingTitle,
+                sourceName: targetCase
+                  ? `Routing into ${targetCase.topic}`
+                  : "Creating a new story deck",
+                targetCaseId: targetCase?.case_id || null,
+                targetTopic: targetCase?.topic || route.topic,
+                confidence: route.confidence,
+                reason: route.reason,
+                phase: "analyzing",
+              }
+            : item
+        )
+      );
       const newsCase = await runPreviewAnalysis(preview, {
         topic: targetCase ? targetCase.topic : route.topic,
         existingSources: targetCase?.sources || [],
       });
+      const invalidatedBrief = Boolean(targetCase && briefs[targetCase.case_id]);
       if (targetCase) {
         setBriefs((current) => {
           const next = { ...current };
@@ -290,6 +313,13 @@ export default function Desk({ session, initialVerdicts, onExit, onAddCase }) {
       if (targetCase && activeCaseId === targetCase.case_id) {
         setActiveCaseId(newsCase.case_id);
       }
+      setBoardNotice(
+        targetCase
+          ? `Article routed into "${targetCase.topic}".${
+              invalidatedBrief ? " The old brief was removed because the deck changed." : ""
+            }`
+          : `New story deck created: "${newsCase.topic}".`
+      );
     } catch (err) {
       setBoardNotice(
         err?.message
@@ -333,7 +363,7 @@ export default function Desk({ session, initialVerdicts, onExit, onAddCase }) {
                 <span className="source-type">{s.source_type}</span>
                 <p className="source-snippet">{s.text}</p>
                 <button className="btn-link source-more" onClick={() => openSource(s.id)}>
-                  Read the original
+                  Read cleaned text
                 </button>
               </li>
             ))}
@@ -403,7 +433,7 @@ export default function Desk({ session, initialVerdicts, onExit, onAddCase }) {
               <button className="brief-list-button" onClick={() => setBriefViewCaseId(brief.newsCase.case_id)}>
                 <span>{brief.newsCase.topic}</span>
                 <span className="mono">
-                  {brief.response.used_claim_ids.length} claims · {brief.holds} hold
+                  {brief.response.used_claim_ids.length} claims · {brief.holds} review hold
                 </span>
               </button>
             </li>
@@ -447,6 +477,15 @@ export default function Desk({ session, initialVerdicts, onExit, onAddCase }) {
               Add URL
             </button>
           )}
+          <button
+            className={railTab === "briefs" ? "desk-tab desk-tab-active" : "desk-tab"}
+            onClick={() => {
+              setRailTab("briefs");
+              setSheet(null);
+            }}
+          >
+            Briefs ({briefRecords.length})
+          </button>
           <span className="mono desk-mode">
             <span className="live-dot" aria-hidden="true" />
             {live ? "Live analysis" : "Demo data"}
@@ -462,6 +501,11 @@ export default function Desk({ session, initialVerdicts, onExit, onAddCase }) {
         <aside className="rail rail-left">{sourceList}</aside>
 
         <main className="stage" ref={stageRef}>
+          {boardNotice && !emptyBoard && (
+            <p className="board-notice" role="status">
+              {boardNotice}
+            </p>
+          )}
           {emptyBoard ? (
             <div className="empty-board">
               <p className="kicker">Case board</p>
@@ -523,7 +567,7 @@ export default function Desk({ session, initialVerdicts, onExit, onAddCase }) {
                       <span className="ctl-key mono">&larr;</span> Discard
                     </button>
                     <button className="ctl ctl-hold" onClick={() => requestDecide("to_verify")}>
-                      <span className="ctl-key mono">&darr;</span> Hold
+                      <span className="ctl-key mono">&darr;</span> Hold for review
                     </button>
                     <button className="ctl ctl-approve" onClick={() => requestDecide("confirmed")}>
                       Approve <span className="ctl-key mono">&rarr;</span>
@@ -535,7 +579,7 @@ export default function Desk({ session, initialVerdicts, onExit, onAddCase }) {
                     </button>
                     <span className="mono stage-hint">
                       {activeDeckState.unruled.length === 0 && activeDeckState.hasHolds
-                        ? "held article cards are back on the desk"
+                        ? "held-for-review article cards are back on the desk"
                         : "drag article cards, arrows rule, esc closes"}
                     </span>
                   </div>
@@ -550,7 +594,7 @@ export default function Desk({ session, initialVerdicts, onExit, onAddCase }) {
                       <dd className="mono">{activeDeckState.approved.length}</dd>
                     </div>
                     <div>
-                      <dt>On hold</dt>
+                      <dt>Held for review</dt>
                       <dd className="mono">{activeDeckState.held.length}</dd>
                     </div>
                     <div>
@@ -576,7 +620,8 @@ export default function Desk({ session, initialVerdicts, onExit, onAddCase }) {
                   </div>
                   {activeDeckState.hasHolds && (
                     <p className="done-warning">
-                      Held article cards can be reopened from this deck on the board.
+                      Held-for-review articles are excluded from this brief. Reopen this deck
+                      to approve or discard them.
                     </p>
                   )}
                 </div>
@@ -598,29 +643,48 @@ export default function Desk({ session, initialVerdicts, onExit, onAddCase }) {
         </main>
 
         <aside className="rail rail-right">
-          {draftList}
-          <section>
-            <h4 className="rail-title">Desk tally</h4>
-            <ul className="tally">
-              <li>
-                <span className="tally-dot dot-approve" /> Approved
-                <span className="mono tally-num">{counts.confirmed}</span>
-              </li>
-              <li>
-                <span className="tally-dot dot-hold" /> On hold
-                <span className="mono tally-num">{counts.to_verify}</span>
-              </li>
-              <li>
-                <span className="tally-dot dot-discard" /> Discarded
-                <span className="mono tally-num">{counts.ignored}</span>
-              </li>
-              <li>
-                <span className="tally-dot dot-rest" /> Remaining
-                <span className="mono tally-num">{allArticles.length - history.length}</span>
-              </li>
-            </ul>
-          </section>
-          {briefList}
+          <div className="rail-tabs" role="tablist" aria-label="Desk side panel">
+            <button
+              className={railTab === "drafts" ? "rail-tab rail-tab-active" : "rail-tab"}
+              onClick={() => setRailTab("drafts")}
+            >
+              Drafts
+            </button>
+            <button
+              className={railTab === "briefs" ? "rail-tab rail-tab-active" : "rail-tab"}
+              onClick={() => setRailTab("briefs")}
+            >
+              Briefs ({briefRecords.length})
+            </button>
+          </div>
+          {railTab === "briefs" ? (
+            briefList
+          ) : (
+            <>
+              {draftList}
+              <section>
+                <h4 className="rail-title">Desk tally</h4>
+                <ul className="tally">
+                  <li>
+                    <span className="tally-dot dot-approve" /> Approved
+                    <span className="mono tally-num">{counts.confirmed}</span>
+                  </li>
+                  <li>
+                    <span className="tally-dot dot-hold" /> Held for review
+                    <span className="mono tally-num">{counts.to_verify}</span>
+                  </li>
+                  <li>
+                    <span className="tally-dot dot-discard" /> Discarded
+                    <span className="mono tally-num">{counts.ignored}</span>
+                  </li>
+                  <li>
+                    <span className="tally-dot dot-rest" /> Remaining
+                    <span className="mono tally-num">{allArticles.length - history.length}</span>
+                  </li>
+                </ul>
+              </section>
+            </>
+          )}
         </aside>
       </div>
 

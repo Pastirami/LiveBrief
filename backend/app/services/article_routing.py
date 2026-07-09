@@ -1,7 +1,5 @@
-import json
 import math
 import re
-from typing import Any
 
 from app.core.config import Settings, get_settings
 from app.schemas.article import (
@@ -9,19 +7,20 @@ from app.schemas.article import (
     ArticleRouteResponse,
     DeckRouteCandidate,
 )
-from app.services.openai_client import OpenAIResponsesClient, OpenAIServiceError
+from app.services.local_embeddings import LocalEmbeddingError, LocalSentenceEmbeddingModel
 
 
 class ArticleDeckRouter:
     """Routes one article card into an existing story deck or a new deck.
 
-    This is the seam for replacing AI text comparison with embeddings later.
-    Keep callers dependent on the ArticleRouteResponse contract, not the
-    matching strategy.
+    The public API stays stable while the matching strategy uses a local
+    open-source embedding model first and deterministic keyword overlap as
+    the offline fallback.
     """
 
     def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or get_settings()
+        self._embedding_model = LocalSentenceEmbeddingModel(self.settings.router_embedding_model)
 
     def route(
         self,
@@ -31,73 +30,48 @@ class ArticleDeckRouter:
         if not decks:
             return self._new_deck(article, "No existing decks are on the board.")
 
-        if self.settings.openai_api_key:
-            try:
-                routed = self._route_with_ai(article, decks)
-                if routed is not None:
-                    return routed
-            except OpenAIServiceError:
-                pass
+        try:
+            return self._route_with_local_embeddings(article, decks)
+        except LocalEmbeddingError:
+            pass
 
         return self._route_with_overlap(article, decks)
 
-    def _route_with_ai(
+    def _route_with_local_embeddings(
         self,
         article: ArticlePreviewResponse,
         decks: list[DeckRouteCandidate],
-    ) -> ArticleRouteResponse | None:
-        client = OpenAIResponsesClient(self.settings)
-        deck_payload = [
-            {
-                "case_id": deck.case_id,
-                "topic": deck.topic,
-                "source_count": deck.source_count,
-                "source_names": deck.source_names[:6],
-                "excerpts": deck.excerpts[:3],
-            }
-            for deck in decks
+    ) -> ArticleRouteResponse:
+        article_text = self._article_embedding_text(article)
+        deck_texts = [self._deck_embedding_text(deck) for deck in decks]
+        vectors = self._embedding_model.encode([article_text, *deck_texts])
+        if len(vectors) != len(decks) + 1:
+            raise LocalEmbeddingError("Local embedding model returned an unexpected vector count.")
+
+        article_vector = vectors[0]
+        scored = [
+            (self._cosine(article_vector, deck_vector), deck)
+            for deck, deck_vector in zip(decks, vectors[1:], strict=True)
         ]
-        payload = client.create_structured_response(
-            instructions=(
-                "You route a single news article into a newsroom story deck. "
-                "Choose an existing deck only when the article is about the same concrete "
-                "event, claim set, company action, place-specific incident, or developing story. "
-                "Do not group merely because articles share a broad category such as politics, "
-                "markets, weather, crime, or technology. If uncertain, create a new deck."
-            ),
-            input_text=(
-                "Article to route:\n"
-                f"{json.dumps(self._article_payload(article), ensure_ascii=False)}\n\n"
-                "Existing decks:\n"
-                f"{json.dumps(deck_payload, ensure_ascii=False)}"
-            ),
-            schema_name="livebrief_article_route",
-            schema={
-                "type": "object",
-                "additionalProperties": False,
-                "properties": {
-                    "target_case_id": {"type": ["string", "null"]},
-                    "topic": {"type": "string"},
-                    "confidence": {"type": "integer", "minimum": 0, "maximum": 100},
-                    "reason": {"type": "string"},
-                },
-                "required": ["target_case_id", "topic", "confidence", "reason"],
-            },
-            max_output_tokens=450,
-        )
-        target = payload.get("target_case_id")
-        valid_ids = {deck.case_id for deck in decks}
-        confidence = payload.get("confidence")
-        if not isinstance(confidence, int):
-            confidence = 0
-        if target not in valid_ids or confidence < 60:
-            target = None
-        topic = str(payload.get("topic") or article.title or article.source_name).strip()
+        score, deck = max(scored, key=lambda item: item[0])
+        confidence = max(0, min(100, round(score * 100)))
+        if score < self.settings.router_embedding_threshold:
+            return self._new_deck(
+                article,
+                (
+                    f"Local embedding match was below threshold "
+                    f"({score:.2f} < {self.settings.router_embedding_threshold:.2f})."
+                ),
+                confidence=confidence,
+            )
         return ArticleRouteResponse(
-            target_case_id=target,
-            topic=topic[:240],
-            confidence=max(0, min(100, confidence)),
-            reason=str(payload.get("reason") or "AI routing completed."),
+            target_case_id=deck.case_id,
+            topic=deck.topic,
+            confidence=confidence,
+            reason=(
+                f"Matched by local open-source embeddings "
+                f"({self.settings.router_embedding_model}, cosine {score:.2f})."
+            ),
         )
 
     def _route_with_overlap(
@@ -122,25 +96,58 @@ class ArticleDeckRouter:
             target_case_id=deck.case_id,
             topic=deck.topic,
             confidence=min(95, int(score * 55)),
-            reason="Matched by local keyword overlap; AI routing was unavailable.",
+            reason="Matched by local keyword overlap; local embedding routing was unavailable.",
         )
 
-    def _new_deck(self, article: ArticlePreviewResponse, reason: str) -> ArticleRouteResponse:
+    def _new_deck(
+        self,
+        article: ArticlePreviewResponse,
+        reason: str,
+        confidence: int = 100,
+    ) -> ArticleRouteResponse:
         topic = article.title or article.source_name or "Untitled report"
         return ArticleRouteResponse(
             target_case_id=None,
             topic=topic[:240],
-            confidence=100,
+            confidence=max(0, min(100, confidence)),
             reason=reason,
         )
 
-    def _article_payload(self, article: ArticlePreviewResponse) -> dict[str, Any]:
-        return {
-            "title": article.title,
-            "source_name": article.source_name,
-            "url": article.final_url or article.url,
-            "excerpt": article.excerpt,
-        }
+    def _article_embedding_text(self, article: ArticlePreviewResponse) -> str:
+        return self._compact_text(
+            " ".join(
+                [
+                    article.title,
+                    article.source_name,
+                    article.excerpt,
+                    article.text[:2400],
+                ]
+            )
+        )
+
+    def _deck_embedding_text(self, deck: DeckRouteCandidate) -> str:
+        return self._compact_text(
+            " ".join(
+                [
+                    deck.topic,
+                    " ".join(deck.source_names[:8]),
+                    " ".join(deck.excerpts[:6]),
+                ]
+            )
+        )
+
+    def _compact_text(self, text: str) -> str:
+        return re.sub(r"\s+", " ", text).strip()[:3600]
+
+    def _cosine(self, a: list[float], b: list[float]) -> float:
+        if len(a) != len(b) or not a:
+            raise LocalEmbeddingError("Embedding vectors are incompatible.")
+        dot = sum(x * y for x, y in zip(a, b, strict=True))
+        norm_a = math.sqrt(sum(x * x for x in a))
+        norm_b = math.sqrt(sum(y * y for y in b))
+        if norm_a == 0 or norm_b == 0:
+            return 0.0
+        return dot / (norm_a * norm_b)
 
     def _tokens(self, text: str) -> set[str]:
         stop = {

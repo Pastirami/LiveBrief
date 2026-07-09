@@ -100,7 +100,7 @@ export default function BriefView({
                   <div className="meta-figures mono">
                     <span>{brief.response.used_claim_ids.length} claims used</span>
                     <span>{brief.response.excluded_claim_ids.length} excluded</span>
-                    <span>{brief.holds} still on hold</span>
+                    <span>{brief.holds} held for review, excluded from copy</span>
                   </div>
 
                   {brief.response.safety_notes?.length > 0 && (

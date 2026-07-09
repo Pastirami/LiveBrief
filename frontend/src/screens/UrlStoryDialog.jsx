@@ -112,6 +112,10 @@ export default function UrlStoryDialog({ open, onClose, onConfirm, busy, error }
               {preview.source_name} · {preview.word_count} words
             </p>
             <p className="url-preview-excerpt">{preview.excerpt}</p>
+            <p className="url-preview-note">
+              Cleaned text is the article body after page chrome, ads and repeated boilerplate
+              are removed. LiveBrief extracts claims from this cleaned text.
+            </p>
             <p className="mono modal-link">
               Filed from{" "}
               <a href={preview.final_url || preview.url} target="_blank" rel="noreferrer">

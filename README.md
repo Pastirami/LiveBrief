@@ -25,7 +25,7 @@ Conflicts remain visible until an editor reviews them.
 
 - Public article URL ingestion and pasted-text support
 - Article-body extraction with Trafilatura and BeautifulSoup fallback
-- AI routing that adds a new article to a matching story deck or starts a new deck
+- Local open-source embedding routing that adds a new article to a matching story deck or starts a new deck
 - OpenAI Responses API extraction using strict structured output
 - Source-grounded claims with evidence, confidence, risk, time, and location
 - Automatic claim grouping and contradiction alerts
@@ -183,6 +183,8 @@ To verify the configured OpenAI key separately:
 | `OPENAI_API_KEY` | none | Server-side OpenAI credential |
 | `DEFAULT_MODEL` | `gpt-4.1-mini` | Extraction model |
 | `EXTRACTOR_MODE` | `ai` | `ai` or offline `rule` mode |
+| `ROUTER_EMBEDDING_MODEL` | `sentence-transformers/all-MiniLM-L6-v2` | Local open-source model used for story deck routing |
+| `ROUTER_EMBEDDING_THRESHOLD` | `0.52` | Minimum cosine similarity required to append an article to an existing deck |
 | `CORS_ORIGINS` | local Vite origins | Allowed frontend origins |
 | `MAX_ARTICLES` | `10` | Maximum reports per analysis |
 | `MAX_ARTICLE_CHARS` | `50000` | Text retained per report |

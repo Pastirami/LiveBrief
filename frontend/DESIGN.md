@@ -84,6 +84,10 @@ Landing ─→ Analyzing ─→ Desk ─→ BriefView(저장된 deck brief)
 보낸다. 브리프 생성은 API 실패 시 동일한 무발명(no-invention) 규칙의 로컬 컴포저로
 폴백.
 
+`cleaned article text`는 원문 HTML 전체가 아니라 크롤링 후 내비게이션, 광고,
+반복 보일러플레이트를 제거한 기사 본문이다. 카드와 모달은 이 정제 본문을 보여주고,
+claim 추출도 이 텍스트를 기준으로 한다.
+
 ---
 
 ## 5. Desk 레이아웃
@@ -92,8 +96,8 @@ Landing ─→ Analyzing ─→ Desk ─→ BriefView(저장된 deck brief)
 
 ```
 ┌────────────┬──────────────────────┬────────────┐
-│ 소스 온 파일 │        STAGE         │ 진행 드래프트 │
-│ 컨플릭트 알림 │  케이스 보드 ↔ 기사 카드 덱 │  데스크 탤리  │
+│ 소스 온 파일 │        STAGE         │ Drafts / Briefs │
+│ 컨플릭트 알림 │  케이스 보드 ↔ 기사 카드 덱 │  데스크 탤리   │
 └────────────┴──────────────────────┴────────────┘
 ```
 
@@ -101,7 +105,7 @@ Landing ─→ Analyzing ─→ Desk ─→ BriefView(저장된 deck brief)
 
 ### 모바일 (<1024px)
 
-- 좌우 레일 숨김 → 하단 고정 시트 탭(`Draft (n)` / `Sources (n)` / `n conflicts`)으로 대체. 탭은 슬라이드업 시트(`.sheet`)를 연다.
+- 좌우 레일 숨김 → 하단 고정 시트 탭(`Drafts (n)` / `Sources (n)` / `Briefs (n)`)으로 대체. 탭은 슬라이드업 시트(`.sheet`)를 연다.
 - 카드는 콘텐츠 기반 높이(top 카드 `position: relative`, 뒷장은 absolute)로
   전환해 잘림을 방지. 컨트롤은 카드 바로 아래.
 - `100dvh`, `env(safe-area-inset-bottom)` 사용.
@@ -111,8 +115,9 @@ Landing ─→ Analyzing ─→ Desk ─→ BriefView(저장된 deck brief)
 ## 6. 케이스 보드 (토픽 클러스터)
 
 `screens/ClusterField.jsx`. 유사한 주제의 기사들을 **스토리 덱(pile)** 으로
-스테이지에 흩어 놓는다. 현재 라우팅은 AI가 담당하고, 추후 텍스트 임베딩 모델 API로
-교체할 수 있게 백엔드 `ArticleDeckRouter`에 모아 둔다.
+스테이지에 흩어 놓는다. 라우팅은 백엔드 `ArticleDeckRouter`가 담당하며, 외부
+임베딩 API가 아니라 로컬 오픈소스 `sentence-transformers` 모델로 기사와 덱 요약의
+cosine similarity를 비교한다.
 
 - **배치**: 미리 정의된 8개 슬롯(% 좌표)에 순서대로. 더미당 `--tilt`
   (-2.4°~2.4°)로 손으로 놓은 느낌.
@@ -128,6 +133,7 @@ Landing ─→ Analyzing ─→ Desk ─→ BriefView(저장된 deck brief)
 | `deal-in` | 보드 최초 진입(세션당 1회) | 더미들이 위(-38vh)에서 120ms 간격 스태거로 낙하·감속 착지 후 부유 시작 |
 | pick-up | 더미 클릭 | 선택 더미 1.14배 리프트 + 그림자 확대, 나머지는 220ms 페이드아웃 → 240ms 뒤 덱으로 전환 |
 | `deck-grow` | 덱 마운트 | 클릭한 더미의 실좌표(`--from-x/y`)에서 scale 0.24 → 1.0, 미세 오버슈트 이징 |
+| `route-flight` | URL 분석이 기존 덱으로 라우팅됨 | 작은 기사 카드가 보드 중앙에서 타깃 덱으로 반복 비행, 타깃 덱은 붉은 pulse와 `Incoming article` 배지로 강조 |
 | settle-back | 더미의 마지막 기사 카드 판정 | "DECK RULED — RETURNING TO THE BOARD" 600ms 후 보드 복귀 |
 
 ---
@@ -141,7 +147,7 @@ Pointer Events 기반 자체 드래그 물리.
 - **임계값**: 가로 100px(승인/기각), 세로 아래 96px(보류, 수직 우세일 때만).
 - **스탬프**: 드래그 방향/거리에 비례해 러버스탬프 오버레이 표시 —
   `APPROVED`(초록, 좌상단 −9°) / `DISCARDED`(빨강, 우상단 9°) /
-  `HOLD — VERIFY`(앰버, 하단 −3°).
+  `HOLD FOR REVIEW`(앰버, 하단 −3°).
 - **퇴장**: 판정 방향으로 300ms 비행(`120vw` / `-120vw` / `110vh`) 후 커밋.
 - **명령 통일**: 버튼·키보드 판정은 `command {status, seq, id}`를 톱카드에
   내려보내 스와이프와 동일한 퇴장 애니메이션을 태운다. `id`로 대상 카드를
@@ -149,12 +155,16 @@ Pointer Events 기반 자체 드래그 물리.
 - **언두**: 판정 스택 pop + 복귀 카드가 판정 방향 반대에서 날아 들어오는
   `card-return-*` 키프레임. 덱 안에서는 해당 클러스터의 판정만 되돌릴 수 있고,
   보드/완료 화면에서 언두하면 해당 클러스터 덱이 자동으로 다시 열린다.
-- **키보드 맵**: `→` 승인 · `←` 기각 · `↓` 보류 · `z`/`u`/`Backspace` 언두 ·
+- **키보드 맵**: `→` 승인 · `←` 기각 · `↓` 검토 보류 · `z`/`u`/`Backspace` 언두 ·
   `Esc` 보드로 복귀.
 - **카드 구조** (위→아래): Article on file 키커 + `nn / mm` 카운트 →
-  리스크/claim count/contested 뱃지 → 출처명 → 정제된 기사 본문 발췌 →
-  이 기사에서 추출된 claim 목록 → (있으면) 이 기사와 연결된 컨플릭트 스트립 →
+  리스크/claim count/contested 뱃지 → confidence/risk 설명 → 출처명 →
+  스크롤 가능한 정제 기사 본문 → 이 기사에서 추출된 claim 목록 →
+  (있으면) 이 기사와 연결된 컨플릭트 스트립 →
   푸터(스토리명·타입 / 평균 추출 신뢰도 카운트업 % + 3밴드 컬러 미터).
+
+`Hold for review`는 최종 발행 승인과 다르다. 해당 기사는 덱 클릭 시 다시 떠서
+승인/기각할 수 있고, 브리프 생성 시에는 제외된다.
 
 ---
 

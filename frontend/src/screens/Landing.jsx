@@ -26,7 +26,7 @@ export default function Landing({ onDemo, onCompose }) {
         <p className="lede">
           Feed the desk reports from any number of stories. The machine sorts
           them into topic piles and extracts every claim with its source and
-          evidence attached — then the judgement is yours. Approve, hold or
+          evidence attached — then the judgement is yours. Approve, hold for review or
           discard each claim; each story's brief is written only from what you
           approved.
         </p>

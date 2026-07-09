@@ -9,6 +9,20 @@ from app.services.article_ingestion import ArticleFetchError, ArticleIngestionSe
 client = TestClient(app)
 
 
+class FakeEmbeddingModel:
+    def encode(self, texts):
+        vectors = []
+        for text in texts:
+            lowered = text.lower()
+            if "storm" in lowered or "harbour" in lowered:
+                vectors.append([1.0, 0.0, 0.0])
+            elif "election" in lowered:
+                vectors.append([0.0, 1.0, 0.0])
+            else:
+                vectors.append([0.0, 0.0, 1.0])
+        return vectors
+
+
 def test_health_reports_ai_readiness_without_exposing_key():
     response = client.get("/api/v1/health")
 
@@ -86,7 +100,8 @@ def test_preview_endpoint_returns_clean_article_metadata(monkeypatch):
 
 
 def test_route_endpoint_matches_article_to_existing_deck(monkeypatch):
-    monkeypatch.setattr(analysis.article_router.settings, "openai_api_key", None)
+    monkeypatch.setattr(analysis.article_router, "_embedding_model", FakeEmbeddingModel())
+    monkeypatch.setattr(analysis.article_router.settings, "router_embedding_threshold", 0.5)
 
     response = client.post(
         "/api/v1/analysis/route",
@@ -116,6 +131,42 @@ def test_route_endpoint_matches_article_to_existing_deck(monkeypatch):
     payload = response.json()
     assert payload["target_case_id"] == "deck-1"
     assert payload["topic"] == "Harbour closure after storm damage"
+    assert "local open-source embeddings" in payload["reason"]
+
+
+def test_route_endpoint_creates_new_deck_when_embedding_score_is_low(monkeypatch):
+    monkeypatch.setattr(analysis.article_router, "_embedding_model", FakeEmbeddingModel())
+    monkeypatch.setattr(analysis.article_router.settings, "router_embedding_threshold", 0.8)
+
+    response = client.post(
+        "/api/v1/analysis/route",
+        json={
+            "article": {
+                "url": "https://example.com/election",
+                "final_url": "https://example.com/election",
+                "source_name": "Example Politics",
+                "title": "Election recount begins downtown",
+                "text": "Election officials opened a recount after a close municipal vote.",
+                "excerpt": "Election officials opened a recount.",
+                "word_count": 8,
+            },
+            "decks": [
+                {
+                    "case_id": "deck-1",
+                    "topic": "Harbour closure after storm damage",
+                    "source_count": 1,
+                    "source_names": ["Port desk"],
+                    "excerpts": ["Officials closed the harbour after storm damage."],
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["target_case_id"] is None
+    assert payload["topic"] == "Election recount begins downtown"
+    assert "below threshold" in payload["reason"]
 
 
 def test_lan_vite_origin_is_allowed_by_cors():

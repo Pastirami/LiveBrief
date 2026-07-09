@@ -4,10 +4,14 @@ import { CountUp, Meter, RiskBadge, SourceMark } from "../bits";
 const H_THRESHOLD = 100;
 const V_THRESHOLD = 96;
 const EXIT_MS = 300;
+const CONFIDENCE_HELP =
+  "Average confidence that the backend correctly extracted these claims from the cleaned article text. It is not a truth score.";
+const RISK_HELP =
+  "High or critical risk flags claims that need careful attribution, such as casualty numbers, cause, responsibility, location/time uncertainty, unverified details, or conflicts.";
 
 /**
  * One article/source as a draggable index card.
- * Right = approve all claims from this article, left = discard, down = hold.
+ * Right = approve all claims from this article, left = discard, down = hold for review.
  */
 export default function ClaimCard({
   article,
@@ -62,6 +66,7 @@ export default function ClaimCard({
   const onPointerDown = (e) => {
     if (!interactive || exit) return;
     if (e.target.closest("a, button")) return;
+    if (e.target.closest(".card-body")) return;
     start.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
     cardRef.current.setPointerCapture(e.pointerId);
     setDrag({ dx: 0, dy: 0, active: true });
@@ -122,7 +127,7 @@ export default function ClaimCard({
         Discarded
       </div>
       <div className="stamp stamp-hold" style={{ opacity: exit === "to_verify" ? 1 : holdHint }}>
-        Hold — verify
+        Hold for review
       </div>
 
       <header className="card-head">
@@ -138,45 +143,56 @@ export default function ClaimCard({
         {conflicts.length > 0 && <span className="risk risk-contested">{conflicts.length} conflicts</span>}
       </div>
 
+      <div className="card-guidance">
+        <span title={CONFIDENCE_HELP}>Confidence is extraction certainty, not truth.</span>
+        <span title={RISK_HELP}>High risk means the claim needs attribution or extra review.</span>
+      </div>
+
       <h3 className="card-claim">
         <SourceMark name={article.name} url={article.url} size={24} />
         {article.name}
       </h3>
 
-      <blockquote className="card-evidence">
-        <span className="evidence-label">Cleaned article text</span>
-        {article.text}
-        {onViewSource && (
-          <button className="btn-link evidence-more" onClick={() => onViewSource(article.id)}>
-            Read the original report
-          </button>
-        )}
-      </blockquote>
-
-      {claims.length > 0 && (
-        <div className="article-claims">
-          <p className="conflict-title">Claims extracted from this article</p>
-          <ul>
-            {claims.slice(0, 5).map((claim) => (
-              <li key={claim.id}>{claim.claim}</li>
-            ))}
-          </ul>
-          {claims.length > 5 && (
-            <p className="mono article-claims-more">+ {claims.length - 5} more claims</p>
+      <div className="card-body">
+        <blockquote className="card-evidence">
+          <span className="evidence-label">Cleaned article text</span>
+          <span className="evidence-help">
+            Crawled body text with navigation, ads and boilerplate removed. The claims below
+            are extracted from this text.
+          </span>
+          <span>{article.text}</span>
+          {onViewSource && (
+            <button className="btn-link evidence-more" onClick={() => onViewSource(article.id)}>
+              Read full cleaned text
+            </button>
           )}
-        </div>
-      )}
+        </blockquote>
 
-      {conflicts.length > 0 && (
-        <div className="card-conflict">
-          <p className="conflict-title">Conflicts touching this article</p>
-          {conflicts.slice(0, 2).map((conflict) => (
-            <p className="conflict-reco" key={conflict.id}>
-              {conflict.title}: {conflict.recommendation}
-            </p>
-          ))}
-        </div>
-      )}
+        {claims.length > 0 && (
+          <div className="article-claims">
+            <p className="conflict-title">Claims extracted from this article</p>
+            <ul>
+              {claims.slice(0, 5).map((claim) => (
+                <li key={claim.id}>{claim.claim}</li>
+              ))}
+            </ul>
+            {claims.length > 5 && (
+              <p className="mono article-claims-more">+ {claims.length - 5} more claims</p>
+            )}
+          </div>
+        )}
+
+        {conflicts.length > 0 && (
+          <div className="card-conflict">
+            <p className="conflict-title">Conflicts touching this article</p>
+            {conflicts.slice(0, 2).map((conflict) => (
+              <p className="conflict-reco" key={conflict.id}>
+                {conflict.title}: {conflict.recommendation}
+              </p>
+            ))}
+          </div>
+        )}
+      </div>
 
       <footer className="card-foot">
         <div className="card-source">
@@ -189,7 +205,7 @@ export default function ClaimCard({
             {article.received_at ? ` · ${article.received_at}` : ""}
           </span>
         </div>
-        <div className="card-confidence">
+        <div className="card-confidence" title={CONFIDENCE_HELP}>
           <span className="mono confidence-num">
             {interactive ? <CountUp value={confidence} suffix="%" /> : `${confidence}%`}
           </span>

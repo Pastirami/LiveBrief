@@ -68,9 +68,10 @@ Response fields:
 ### `POST /api/v1/analysis/route`
 
 Routes one crawled article preview into an existing story deck or recommends a
-new deck. Current routing uses OpenAI structured output when configured and a
-deterministic keyword-overlap fallback when AI is unavailable. This endpoint is
-the intended integration point for a future embeddings-based matcher.
+new deck. Current routing uses a local open-source sentence-transformers model
+to compare the article with existing deck summaries by cosine similarity. A
+deterministic keyword-overlap fallback keeps local tests and offline demos
+working when the embedding package or model cache is unavailable.
 
 Request body:
 

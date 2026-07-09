@@ -34,11 +34,13 @@ export default function ClusterField({
         const total = newsCase.sources.length;
         const done = ruled === total;
         const deckState = deckStates[newsCase.case_id];
+        const incoming = pendingCases.find((pending) => pending.targetCaseId === newsCase.case_id);
         const hasBrief = Boolean(deckState?.brief);
         const canCompose = done && onComposeDeck;
         const [x, y] = SLOTS[i % SLOTS.length];
         let className = "pile";
         if (done) className += " pile-done";
+        if (incoming) className += " pile-route-target";
         if (animateIn) className += " pile-deal";
         if (leavingId) {
           className += leavingId === newsCase.case_id ? " pile-picked" : " pile-fading";
@@ -70,7 +72,7 @@ export default function ClusterField({
                   {done ? `${total} article cards ruled` : `${ruled}/${total} article cards`}
                 </span>
                 <span className="pile-badges">
-                  {deckState?.hasHolds && <span className="risk risk-medium">holds</span>}
+                  {deckState?.hasHolds && <span className="risk risk-medium">review hold</span>}
                   {newsCase.conflicts.length > 0 && (
                     <span className="risk risk-contested">
                       {newsCase.conflicts.length} conflict{newsCase.conflicts.length > 1 ? "s" : ""}
@@ -83,6 +85,12 @@ export default function ClusterField({
                 {done && (
                   <span className="pile-stamp" aria-hidden="true">
                     Ruled
+                  </span>
+                )}
+                {incoming && (
+                  <span className="route-landing">
+                    Incoming article
+                    {typeof incoming.confidence === "number" ? ` · ${incoming.confidence}% route` : ""}
                   </span>
                 )}
               </span>
@@ -103,7 +111,33 @@ export default function ClusterField({
           </div>
         );
       })}
-      {pendingCases.map((pending, i) => {
+      {pendingCases
+        .filter((pending) => pending.targetCaseId)
+        .map((pending) => {
+          const targetIndex = cases.findIndex((newsCase) => newsCase.case_id === pending.targetCaseId);
+          if (targetIndex === -1) return null;
+          const [x, y] = SLOTS[targetIndex % SLOTS.length];
+          return (
+            <div
+              key={`${pending.id}-flight`}
+              className="route-flight"
+              style={{
+                "--target-x": `${x}%`,
+                "--target-y": `${y}%`,
+              }}
+              aria-live="polite"
+            >
+              <span className="route-card">
+                <span className="pile-kicker">Routing</span>
+                <span>{pending.title}</span>
+                <span className="mono">
+                  {pending.targetTopic ? `into ${pending.targetTopic}` : pending.sourceName}
+                </span>
+              </span>
+            </div>
+          );
+        })}
+      {pendingCases.filter((pending) => !pending.targetCaseId).map((pending, i) => {
         const [x, y] = SLOTS[(cases.length + i) % SLOTS.length];
         return (
           <div
@@ -125,7 +159,9 @@ export default function ClusterField({
               <span className="pile-topic">{pending.title}</span>
               <span className="pile-count mono">{pending.sourceName || "Linked article"}</span>
               <span className="pile-badges">
-                <span className="risk risk-medium">analyzing</span>
+                <span className="risk risk-medium">
+                  {pending.phase === "routing" ? "routing" : "analyzing"}
+                </span>
               </span>
               <span className="pile-progress pile-progress-active" aria-hidden="true">
                 <span />

@@ -584,6 +584,22 @@ button {
   min-width: 11rem;
 }
 
+.desk-tab {
+  font-family: var(--sans);
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: 1px solid var(--ink);
+  padding: 0.38rem 0.6rem;
+  white-space: nowrap;
+}
+
+.desk-tab-active {
+  color: var(--paper);
+  background: var(--ink);
+}
+
 .progress-rail {
   height: 4px;
   background: var(--paper-deep);
@@ -717,6 +733,7 @@ button {
 /* ---------- stage & cards ---------- */
 
 .stage {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -724,6 +741,32 @@ button {
   padding: 1.6rem 1rem 1.2rem;
   min-height: 0;
   overflow: hidden;
+}
+
+.board-notice {
+  position: absolute;
+  top: 1rem;
+  left: 50%;
+  z-index: 20;
+  transform: translateX(-50%);
+  width: min(36rem, calc(100% - 2rem));
+  background: var(--ink);
+  color: var(--paper);
+  border: 1px solid var(--ink);
+  box-shadow: var(--shadow);
+  padding: 0.55rem 0.75rem;
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+  animation: notice-in 0.22s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes notice-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+  }
 }
 
 .empty-board {
@@ -753,8 +796,8 @@ button {
 .card-stack {
   position: relative;
   width: min(30rem, 92vw);
-  height: min(31rem, 62dvh);
-  min-height: 24rem;
+  height: clamp(31rem, 68dvh, 43rem);
+  min-height: 26rem;
 }
 
 .claim-card {
@@ -876,6 +919,7 @@ button {
 
 .card-badges {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.45rem;
 }
 
@@ -926,16 +970,40 @@ button {
   letter-spacing: -0.01em;
 }
 
+.card-guidance {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+  font-family: var(--sans);
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: var(--ink-soft);
+}
+
+.card-guidance span {
+  border-left: 2px solid var(--hairline);
+  padding-left: 0.45rem;
+}
+
+.card-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding-right: 0.2rem;
+}
+
 .card-evidence {
   border-left: 3px solid var(--hairline);
   padding: 0.2rem 0 0.2rem 0.85rem;
   font-size: 0.9rem;
   font-style: italic;
   color: var(--ink-soft);
-  display: -webkit-box;
-  -webkit-line-clamp: 5;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  overflow-wrap: anywhere;
 }
 
 .evidence-label {
@@ -948,6 +1016,16 @@ button {
   text-transform: uppercase;
   color: var(--ink-soft);
   margin-bottom: 0.2rem;
+}
+
+.evidence-help {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-family: var(--sans);
+  font-style: normal;
+  font-size: 0.68rem;
+  line-height: 1.4;
+  color: var(--ink-soft);
 }
 
 .card-conflict {
@@ -1283,6 +1361,98 @@ button {
   opacity: 0.62;
 }
 
+.pile-route-target {
+  z-index: 12;
+}
+
+.pile-route-target .pile-front {
+  opacity: 1;
+  animation: route-target-pulse 1.15s ease-in-out infinite;
+}
+
+.pile-route-target .pile-sheet {
+  border-color: var(--red);
+}
+
+@keyframes route-target-pulse {
+  0%,
+  100% {
+    box-shadow: var(--shadow);
+    outline: 0 solid rgba(164, 30, 30, 0);
+  }
+  50% {
+    box-shadow: 0 4px 8px rgba(28, 25, 19, 0.12), 0 26px 52px rgba(164, 30, 30, 0.24);
+    outline: 5px solid rgba(164, 30, 30, 0.18);
+  }
+}
+
+.route-landing {
+  display: block;
+  margin-top: 0.35rem;
+  font-family: var(--sans);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--paper);
+  background: var(--red);
+  padding: 0.25rem 0.4rem;
+}
+
+.route-flight {
+  position: absolute;
+  left: var(--target-x);
+  top: var(--target-y);
+  z-index: 18;
+  pointer-events: none;
+  animation: route-flight 1.35s cubic-bezier(0.2, 0.75, 0.2, 1) infinite;
+}
+
+.route-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  width: clamp(9rem, 20vw, 12rem);
+  min-height: 5.4rem;
+  padding: 0.7rem 0.78rem;
+  background: var(--card);
+  border: 2px solid var(--red);
+  box-shadow: 0 3px 6px rgba(28, 25, 19, 0.12), 0 22px 44px rgba(164, 30, 30, 0.22);
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.route-card .mono {
+  color: var(--ink-soft);
+  text-transform: uppercase;
+}
+
+@keyframes route-flight {
+  0% {
+    left: 50%;
+    top: 9%;
+    transform: translate(-50%, -50%) scale(0.84) rotate(-6deg);
+    opacity: 0;
+  }
+  14% {
+    opacity: 1;
+  }
+  70% {
+    left: var(--target-x);
+    top: var(--target-y);
+    transform: translate(-50%, -50%) scale(0.45) rotate(4deg);
+    opacity: 1;
+  }
+  100% {
+    left: var(--target-x);
+    top: var(--target-y);
+    transform: translate(-50%, -50%) scale(0.24) rotate(4deg);
+    opacity: 0;
+  }
+}
+
 .pile-compose {
   position: absolute;
   right: -0.45rem;
@@ -1500,6 +1670,28 @@ button {
 }
 
 /* right rail: draft */
+
+.rail-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.rail-tab {
+  font-family: var(--sans);
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: 1px solid var(--ink);
+  padding: 0.48rem 0.35rem;
+}
+
+.rail-tab-active {
+  color: var(--paper);
+  background: var(--ink);
+}
 
 .draft-list {
   list-style: none;
@@ -1759,6 +1951,16 @@ button {
   white-space: pre-line;
 }
 
+.modal-note {
+  margin-bottom: 1rem;
+  padding-left: 0.8rem;
+  border-left: 3px solid var(--hairline);
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+
 .modal-link {
   margin-top: 1.2rem;
   color: var(--ink-soft);
@@ -1796,6 +1998,14 @@ button {
   line-height: 1.65;
   max-height: 15rem;
   overflow-y: auto;
+}
+
+.url-preview-note {
+  margin-top: 0.75rem;
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
 }
 
 .source-ident {
@@ -1992,11 +2202,16 @@ button {
   .claim-card {
     position: relative;
     inset: auto;
+    max-height: calc(100dvh - 13.5rem);
   }
 
   .claim-card.card-under {
     position: absolute;
     inset: 0;
+  }
+
+  .card-guidance {
+    grid-template-columns: 1fr;
   }
 
   .desk-mode {
@@ -2031,6 +2246,10 @@ button {
     display: none;
   }
 
+  .desk-tab {
+    display: none;
+  }
+
   .stage-controls {
     gap: 0.45rem;
   }
@@ -2052,10 +2271,20 @@ button {
     height: min(28rem, 60dvh);
   }
 
+  .board-notice {
+    top: 0.6rem;
+    font-size: 0.66rem;
+  }
+
   .pile-front {
     width: clamp(8rem, 38vw, 10rem);
     min-height: 6.2rem;
     padding: 0.7rem 0.75rem;
+  }
+
+  .route-card {
+    width: 9rem;
+    font-size: 0.68rem;
   }
 
   .field-hint {

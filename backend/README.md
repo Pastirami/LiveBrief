@@ -57,7 +57,7 @@ http://127.0.0.1:8000/openapi.json
 
 - Public HTTP(S) article download with redirects, timeouts, size limits, and SSRF protection
 - Article-body extraction with Trafilatura and a BeautifulSoup fallback
-- AI article routing into existing story decks, with a deterministic fallback
+- Local open-source embedding routing into existing story decks, with a deterministic fallback
 - OpenAI Responses API extraction with strict JSON Schema output
 - Source-grounded claims, evidence, confidence, risk, grouping, and conflict alerts
 - Journalist-controlled claim approval: AI-extracted claims always start as `to_verify`
@@ -75,8 +75,9 @@ http://127.0.0.1:8000/openapi.json
 6. Send claims from approved article cards to `POST /api/v1/analysis/brief`.
 
 Set `EXTRACTOR_MODE=ai` for real OpenAI extraction or `EXTRACTOR_MODE=rule` for
-offline deterministic demos and tests. Never expose `backend/.env` or the API key
-to the frontend.
+offline deterministic demos and tests. Story-deck routing uses the local
+`ROUTER_EMBEDDING_MODEL` sentence-transformers model, not an external embedding
+API. Never expose `backend/.env` or the API key to the frontend.
 
 ## Verification
 

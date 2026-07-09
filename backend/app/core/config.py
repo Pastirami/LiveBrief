@@ -12,6 +12,11 @@ class Settings:
     app_env: str = getenv("APP_ENV", "development")
     api_prefix: str = getenv("API_PREFIX", "/api/v1")
     default_model: str = getenv("DEFAULT_MODEL", "gpt-4.1-mini")
+    router_embedding_model: str = getenv(
+        "ROUTER_EMBEDDING_MODEL",
+        "sentence-transformers/all-MiniLM-L6-v2",
+    )
+    router_embedding_threshold: float = float(getenv("ROUTER_EMBEDDING_THRESHOLD", "0.52"))
     openai_api_key: str | None = getenv("OPENAI_API_KEY")
     extractor_mode: str = getenv("EXTRACTOR_MODE", "ai").lower()
     request_timeout_seconds: float = float(getenv("REQUEST_TIMEOUT_SECONDS", "45"))
