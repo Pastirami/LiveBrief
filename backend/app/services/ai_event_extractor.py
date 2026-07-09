@@ -36,7 +36,7 @@ class AIEventExtractor:
                 input_text=self._prompt(source),
                 schema_name="livebrief_claims",
                 schema=self._schema(),
-                max_output_tokens=1800,
+                max_output_tokens=4000,
             )
         except OpenAIServiceError as exc:
             raise AIExtractionError(str(exc)) from exc
@@ -50,6 +50,7 @@ class AIEventExtractor:
     def _prompt(self, source: SourceDocument) -> str:
         return f"""
 Rules:
+- Extract at most 12 claims; prefer the most newsworthy and verifiable ones.
 - group_key must be exactly one of: incident, casualty_count, event_time, location, cause, verification_status, other.
 - Do not decide what is true.
 - Extract only claims supported by the source text.
