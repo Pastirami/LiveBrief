@@ -912,6 +912,9 @@ button {
 }
 
 .card-claim {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
   font-size: clamp(1.3rem, 3.4vw, 1.7rem);
   font-weight: 600;
   line-height: 1.25;
@@ -924,6 +927,10 @@ button {
   font-size: 0.9rem;
   font-style: italic;
   color: var(--ink-soft);
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .evidence-label {
@@ -943,6 +950,27 @@ button {
   border-left: 3px solid var(--red);
   padding: 0.6rem 0.8rem;
   font-size: 0.82rem;
+}
+
+.article-claims {
+  border-left: 3px solid var(--ink);
+  padding: 0.55rem 0.8rem;
+  background: rgba(253, 251, 245, 0.72);
+  font-size: 0.82rem;
+}
+
+.article-claims ul {
+  margin: 0.35rem 0 0;
+  padding-left: 1rem;
+}
+
+.article-claims li + li {
+  margin-top: 0.25rem;
+}
+
+.article-claims-more {
+  margin-top: 0.35rem;
+  color: var(--ink-soft);
 }
 
 .conflict-title {

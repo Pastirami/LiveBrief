@@ -65,6 +65,45 @@ Response fields:
 - `excerpt`: short preview shown in the URL dialog
 - `word_count`: cleaned body word count
 
+### `POST /api/v1/analysis/route`
+
+Routes one crawled article preview into an existing story deck or recommends a
+new deck. Current routing uses OpenAI structured output when configured and a
+deterministic keyword-overlap fallback when AI is unavailable. This endpoint is
+the intended integration point for a future embeddings-based matcher.
+
+Request body:
+
+```json
+{
+  "article": {
+    "url": "https://example.com/public-article",
+    "final_url": "https://example.com/public-article",
+    "source_name": "Example News",
+    "title": "Storm damage keeps harbour closed",
+    "text": "Cleaned article body...",
+    "excerpt": "Short cleaned excerpt...",
+    "word_count": 420
+  },
+  "decks": [
+    {
+      "case_id": "deck-1",
+      "topic": "Harbour closure after storm damage",
+      "source_count": 2,
+      "source_names": ["Port desk", "City wire"],
+      "excerpts": ["Officials closed the harbour after storm damage."]
+    }
+  ]
+}
+```
+
+Response fields:
+
+- `target_case_id`: existing deck to append to, or `null` for a new deck
+- `topic`: target deck topic or recommended new topic
+- `confidence`: routing confidence from 0 to 100
+- `reason`: short explanation for the route
+
 ### `POST /api/v1/analysis/run`
 
 Analyzes sources and returns structured newsroom data.

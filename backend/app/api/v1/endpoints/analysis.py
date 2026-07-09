@@ -2,14 +2,22 @@ from fastapi import APIRouter, HTTPException
 
 from app.data.sample_case import get_sample_case
 from app.schemas.analysis import AnalysisResult
-from app.schemas.article import AnalyzeRequest, ArticlePreviewRequest, ArticlePreviewResponse
+from app.schemas.article import (
+    AnalyzeRequest,
+    ArticlePreviewRequest,
+    ArticlePreviewResponse,
+    ArticleRouteRequest,
+    ArticleRouteResponse,
+)
 from app.schemas.brief import BriefRequest, BriefResponse
 from app.services.analysis_pipeline import AnalysisPipeline
 from app.services.article_ingestion import ArticleFetchError
+from app.services.article_routing import ArticleDeckRouter
 from app.services.brief_generator import BriefGenerator
 
 router = APIRouter()
 pipeline = AnalysisPipeline()
+article_router = ArticleDeckRouter()
 # Publication copy is assembled deterministically from approved claim text.
 # AI remains responsible for extraction, never for adding prose-level facts.
 brief_generator = BriefGenerator(use_ai=False)
@@ -34,6 +42,15 @@ def preview_article(payload: ArticlePreviewRequest) -> ArticlePreviewResponse:
         return pipeline.ingestion.preview_url(payload.url)
     except ArticleFetchError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/route",
+    response_model=ArticleRouteResponse,
+    summary="Route one article into an existing story deck or a new deck",
+)
+def route_article(payload: ArticleRouteRequest) -> ArticleRouteResponse:
+    return article_router.route(payload.article, payload.decks)
 
 
 @router.post(

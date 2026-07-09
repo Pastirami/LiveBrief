@@ -101,6 +101,47 @@
         }
       }
     },
+    "/api/v1/analysis/route": {
+      "post": {
+        "tags": [
+          "analysis"
+        ],
+        "summary": "Route one article into an existing story deck or a new deck",
+        "operationId": "route_article_api_v1_analysis_route_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArticleRouteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticleRouteResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/analysis/run": {
       "post": {
         "tags": [
@@ -408,6 +449,62 @@
         ],
         "title": "ArticlePreviewResponse"
       },
+      "ArticleRouteRequest": {
+        "properties": {
+          "article": {
+            "$ref": "#/components/schemas/ArticlePreviewResponse"
+          },
+          "decks": {
+            "items": {
+              "$ref": "#/components/schemas/DeckRouteCandidate"
+            },
+            "type": "array",
+            "title": "Decks"
+          }
+        },
+        "type": "object",
+        "required": [
+          "article"
+        ],
+        "title": "ArticleRouteRequest"
+      },
+      "ArticleRouteResponse": {
+        "properties": {
+          "target_case_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Case Id",
+            "description": "Existing deck to append to. Null means create a new deck."
+          },
+          "topic": {
+            "type": "string",
+            "title": "Topic"
+          },
+          "confidence": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Confidence"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "topic",
+          "confidence",
+          "reason"
+        ],
+        "title": "ArticleRouteResponse"
+      },
       "BriefRequest": {
         "properties": {
           "topic": {
@@ -530,6 +627,43 @@
           "recommendation"
         ],
         "title": "ConflictAlert"
+      },
+      "DeckRouteCandidate": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "topic": {
+            "type": "string",
+            "title": "Topic"
+          },
+          "source_count": {
+            "type": "integer",
+            "title": "Source Count",
+            "default": 0
+          },
+          "source_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Source Names"
+          },
+          "excerpts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Excerpts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "topic"
+        ],
+        "title": "DeckRouteCandidate"
       },
       "EventClaim": {
         "properties": {

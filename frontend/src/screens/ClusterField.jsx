@@ -1,5 +1,5 @@
 /**
- * The case board: one floating pile per news story. Piles drift
+ * The case board: one floating pile per story deck. Piles drift
  * gently, carry the story's headline and progress, and expand into
  * the swipe deck when picked up.
  */
@@ -25,10 +25,10 @@ export default function ClusterField({
 }) {
   return (
     <div className="cluster-field">
-      <p className="field-hint mono">Case board — pick up a story to review its claims</p>
+      <p className="field-hint mono">Case board — pick up a story deck to review article cards</p>
       {cases.map((newsCase, i) => {
-        const ruled = newsCase.claims.filter((c) => verdicts[c.id]).length;
-        const total = newsCase.claims.length;
+        const ruled = newsCase.sources.filter((source) => verdicts[source.id]).length;
+        const total = newsCase.sources.length;
         const done = ruled === total;
         const [x, y] = SLOTS[i % SLOTS.length];
         let className = "pile";
@@ -50,7 +50,7 @@ export default function ClusterField({
               "--tilt": `${((i % 3) - 1) * 2.4}deg`,
             }}
             onClick={(e) => onOpen(newsCase.case_id, e.currentTarget)}
-            aria-label={`Review ${newsCase.topic}: ${ruled} of ${total} claims ruled`}
+            aria-label={`Review ${newsCase.topic}: ${ruled} of ${total} articles ruled`}
           >
             <span className="pile-sheet pile-sheet-b" aria-hidden="true" />
             <span className="pile-sheet pile-sheet-a" aria-hidden="true" />
@@ -58,7 +58,7 @@ export default function ClusterField({
               <span className="pile-kicker">Story {String(i + 1).padStart(2, "0")}</span>
               <span className="pile-topic">{newsCase.topic}</span>
               <span className="pile-count mono">
-                {newsCase.sources.length} sources · {done ? `${total} ruled` : `${ruled}/${total} ruled`}
+                {done ? `${total} article cards ruled` : `${ruled}/${total} article cards`}
               </span>
               <span className="pile-badges">
                 {newsCase.conflicts.length > 0 && (

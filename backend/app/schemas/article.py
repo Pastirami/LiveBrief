@@ -83,3 +83,26 @@ class ArticlePreviewResponse(BaseModel):
     text: str
     excerpt: str
     word_count: int
+
+
+class DeckRouteCandidate(BaseModel):
+    case_id: str
+    topic: str
+    source_count: int = 0
+    source_names: list[str] = Field(default_factory=list)
+    excerpts: list[str] = Field(default_factory=list)
+
+
+class ArticleRouteRequest(BaseModel):
+    article: ArticlePreviewResponse
+    decks: list[DeckRouteCandidate] = Field(default_factory=list)
+
+
+class ArticleRouteResponse(BaseModel):
+    target_case_id: str | None = Field(
+        default=None,
+        description="Existing deck to append to. Null means create a new deck.",
+    )
+    topic: str
+    confidence: int = Field(ge=0, le=100)
+    reason: str

@@ -72,21 +72,57 @@ export async function previewArticleUrl(url) {
   );
 }
 
-export async function runPreviewAnalysis(preview) {
+function articleInputFromPreview(preview) {
+  return {
+    source_name: preview.source_name || "Linked article",
+    source_type: "Linked article",
+    url: preview.final_url || preview.url,
+    text: preview.text,
+  };
+}
+
+function articleInputFromSource(source) {
+  return {
+    source_name: source.name,
+    source_type: source.source_type || "Linked article",
+    ...(source.url ? { url: source.url } : {}),
+    ...(source.received_at ? { received_at: source.received_at } : {}),
+    text: source.text,
+  };
+}
+
+export function deckCandidate(newsCase) {
+  return {
+    case_id: newsCase.case_id,
+    topic: newsCase.topic,
+    source_count: newsCase.sources.length,
+    source_names: newsCase.sources.map((source) => source.name),
+    excerpts: newsCase.sources.slice(0, 4).map((source) => source.text.slice(0, 700)),
+  };
+}
+
+export async function routeArticleToDeck(preview, cases) {
+  return await request(
+    "/analysis/route",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        article: preview,
+        decks: cases.map(deckCandidate),
+      }),
+    },
+    45000
+  );
+}
+
+export async function runPreviewAnalysis(preview, { topic, existingSources = [] } = {}) {
   return await request(
     "/analysis/run",
     {
       method: "POST",
       body: JSON.stringify({
-        topic: preview.title || preview.source_name || "Untitled report",
-        articles: [
-          {
-            source_name: preview.source_name || "Linked article",
-            source_type: "Linked article",
-            url: preview.final_url || preview.url,
-            text: preview.text,
-          },
-        ],
+        topic: topic || preview.title || preview.source_name || "Untitled report",
+        articles: [...existingSources.map(articleInputFromSource), articleInputFromPreview(preview)],
       }),
     },
     120000

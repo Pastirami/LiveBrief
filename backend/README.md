@@ -49,6 +49,7 @@ http://127.0.0.1:8000/openapi.json
 - `GET /api/v1/health`
 - `GET /api/v1/analysis/demo`
 - `POST /api/v1/analysis/preview`
+- `POST /api/v1/analysis/route`
 - `POST /api/v1/analysis/run`
 - `POST /api/v1/analysis/brief`
 
@@ -56,6 +57,7 @@ http://127.0.0.1:8000/openapi.json
 
 - Public HTTP(S) article download with redirects, timeouts, size limits, and SSRF protection
 - Article-body extraction with Trafilatura and a BeautifulSoup fallback
+- AI article routing into existing story decks, with a deterministic fallback
 - OpenAI Responses API extraction with strict JSON Schema output
 - Source-grounded claims, evidence, confidence, risk, grouping, and conflict alerts
 - Journalist-controlled claim approval: AI-extracted claims always start as `to_verify`
@@ -66,10 +68,11 @@ http://127.0.0.1:8000/openapi.json
 
 1. Optionally send one public article URL to `POST /api/v1/analysis/preview`
    to crawl and confirm the cleaned text before analysis.
-2. Send public article URLs or pasted source text to `POST /api/v1/analysis/run`.
-3. Render `claims`, `groups`, `conflicts`, and `timeline`.
-4. Let the journalist change each claim status.
-5. Send approved claims to `POST /api/v1/analysis/brief`.
+2. Send that preview plus existing deck summaries to `POST /api/v1/analysis/route`.
+3. Send the routed article set to `POST /api/v1/analysis/run`.
+4. Render one article card per source, with extracted claims shown inside it.
+5. Let the journalist change each article card status.
+6. Send claims from approved article cards to `POST /api/v1/analysis/brief`.
 
 Set `EXTRACTOR_MODE=ai` for real OpenAI extraction or `EXTRACTOR_MODE=rule` for
 offline deterministic demos and tests. Never expose `backend/.env` or the API key

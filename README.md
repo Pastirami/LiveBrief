@@ -17,14 +17,15 @@ During breaking news, facts arrive quickly and often conflict:
 - secondary sources repeat claims without primary confirmation;
 - an early draft can accidentally present uncertain information as fact.
 
-LiveBrief converts every report into an auditable claim matrix. Each claim keeps
-its source and evidence attached, while conflicts remain visible until an editor
-reviews them.
+LiveBrief groups similar reports into story decks. Each article is reviewed as
+one card, while its extracted claims keep source evidence attached for audit.
+Conflicts remain visible until an editor reviews them.
 
 ## Core Features
 
 - Public article URL ingestion and pasted-text support
 - Article-body extraction with Trafilatura and BeautifulSoup fallback
+- AI routing that adds a new article to a matching story deck or starts a new deck
 - OpenAI Responses API extraction using strict structured output
 - Source-grounded claims with evidence, confidence, risk, time, and location
 - Automatic claim grouping and contradiction alerts
@@ -154,6 +155,7 @@ Only claims marked `confirmed` or `add_to_brief` are included.
 | `GET` | `/api/v1/health` | Service and AI readiness |
 | `GET` | `/api/v1/analysis/demo` | Stable demonstration payload |
 | `POST` | `/api/v1/analysis/preview` | Crawl and clean one public article URL |
+| `POST` | `/api/v1/analysis/route` | Route one article into a story deck |
 | `POST` | `/api/v1/analysis/run` | Ingest and compare reports |
 | `POST` | `/api/v1/analysis/brief` | Build an approved-fact brief |
 

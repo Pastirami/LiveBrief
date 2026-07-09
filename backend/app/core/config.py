@@ -27,6 +27,10 @@ class Settings:
         ).split(",")
         if origin.strip()
     ]
+    cors_origin_regex: str | None = getenv(
+        "CORS_ORIGIN_REGEX",
+        r"https?://(localhost|127\.0\.0\.1|0\.0\.0\.0|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+):5174",
+    )
 
 
 @lru_cache

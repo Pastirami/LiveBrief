@@ -3,13 +3,13 @@ import ClaimCard from "./ClaimCard";
 import ClusterField from "./ClusterField";
 import SourceModal from "./SourceModal";
 import UrlStoryDialog from "./UrlStoryDialog";
-import { runPreviewAnalysis } from "../api";
+import { routeArticleToDeck, runPreviewAnalysis } from "../api";
 import { CountUp, SourceMark } from "../bits";
 
 /**
  * The verification desk. The centre stage opens on the case board —
  * one floating pile per news story. Picking up a pile expands it into
- * the swipeable deck; once every claim in the story is ruled the deck
+ * the swipeable deck; once every article in the story is ruled the deck
  * settles back onto the board. Sources and conflicts sit on the left
  * rail, the growing drafts on the right; both collapse into a bottom
  * sheet on small screens.
@@ -17,10 +17,11 @@ import { CountUp, SourceMark } from "../bits";
 export default function Desk({ session, initialVerdicts, onCompose, onExit, onAddCase }) {
   const { cases, live } = session;
   const allClaims = useMemo(() => cases.flatMap((c) => c.claims), [cases]);
+  const allArticles = useMemo(() => cases.flatMap((c) => c.sources), [cases]);
 
   const [verdicts, setVerdicts] = useState(initialVerdicts || {});
   const [history, setHistory] = useState(() =>
-    allClaims.filter((c) => (initialVerdicts || {})[c.id]).map((c) => c.id)
+    allArticles.filter((source) => (initialVerdicts || {})[source.id]).map((source) => source.id)
   );
   const [command, setCommand] = useState(null);
   const [returningId, setReturningId] = useState(null);
@@ -48,7 +49,7 @@ export default function Desk({ session, initialVerdicts, onCompose, onExit, onAd
   }, []);
 
   const canAddStories = Boolean(onAddCase);
-  const finished = allClaims.length > 0 && history.length >= allClaims.length;
+  const finished = allArticles.length > 0 && history.length >= allArticles.length;
   const emptyBoard = cases.length === 0 && pendingStories.length === 0;
 
   const sourceIndex = useMemo(() => {
@@ -61,30 +62,44 @@ export default function Desk({ session, initialVerdicts, onCompose, onExit, onAd
     return map;
   }, [cases]);
 
-  const conflictIndex = useMemo(() => {
+  const claimsBySource = useMemo(() => {
+    const map = {};
+    for (const claim of allClaims) {
+      if (!map[claim.source_id]) map[claim.source_id] = [];
+      map[claim.source_id].push(claim);
+    }
+    return map;
+  }, [allClaims]);
+
+  const conflictsBySource = useMemo(() => {
     const map = {};
     for (const newsCase of cases) {
       const groupById = Object.fromEntries(newsCase.groups.map((g) => [g.id, g]));
-      map[newsCase.case_id] = {};
       for (const conflict of newsCase.conflicts) {
         const group = groupById[conflict.group_id];
-        if (group) map[newsCase.case_id][group.label] = conflict;
+        if (!group) continue;
+        for (const claim of group.claims) {
+          if (!map[claim.source_id]) map[claim.source_id] = [];
+          if (!map[claim.source_id].some((item) => item.id === conflict.id)) {
+            map[claim.source_id].push(conflict);
+          }
+        }
       }
     }
     return map;
   }, [cases]);
 
-  const claimCase = useMemo(() => {
+  const sourceCase = useMemo(() => {
     const map = {};
     for (const newsCase of cases) {
-      for (const c of newsCase.claims) map[c.id] = newsCase;
+      for (const source of newsCase.sources) map[source.id] = newsCase;
     }
     return map;
   }, [cases]);
 
   const active = cases.find((c) => c.case_id === activeCaseId) || null;
-  const pending = active ? active.claims.filter((c) => !verdicts[c.id]) : [];
-  const ruledInActive = active ? active.claims.length - pending.length : 0;
+  const pending = active ? active.sources.filter((source) => !verdicts[source.id]) : [];
+  const ruledInActive = active ? active.sources.length - pending.length : 0;
 
   const counts = useMemo(() => {
     const c = { confirmed: 0, to_verify: 0, ignored: 0 };
@@ -99,7 +114,7 @@ export default function Desk({ session, initialVerdicts, onCompose, onExit, onAd
     () =>
       cases.map((newsCase) => ({
         newsCase,
-        approved: newsCase.claims.filter((c) => verdicts[c.id] === "confirmed"),
+        approved: newsCase.claims.filter((claim) => verdicts[claim.source_id] === "confirmed"),
       })),
     [cases, verdicts]
   );
@@ -143,7 +158,7 @@ export default function Desk({ session, initialVerdicts, onCompose, onExit, onAd
   const undo = () => {
     if (history.length === 0) return;
     const id = history[history.length - 1];
-    const homeCase = claimCase[id];
+    const homeCase = sourceCase[id];
     // Inside a deck, only rulings from that story can be taken back.
     if (activeCaseId && homeCase?.case_id !== activeCaseId) return;
     const dir =
@@ -191,23 +206,30 @@ export default function Desk({ session, initialVerdicts, onCompose, onExit, onAd
     const pendingId = `pending-${Date.now()}`;
     setAddingUrl(true);
     setBoardNotice("");
-    setPendingStories((items) => [
-      ...items,
-      {
-        id: pendingId,
-        title: preview.title || preview.source_name || "Linked article",
-        sourceName: preview.source_name,
-      },
-    ]);
-    setUrlDialogOpen(false);
     try {
-      const newsCase = await runPreviewAnalysis(preview);
-      onAddCase(newsCase, true);
+      const route = await routeArticleToDeck(preview, cases);
+      const targetCase = route.target_case_id
+        ? cases.find((newsCase) => newsCase.case_id === route.target_case_id)
+        : null;
+      setPendingStories((items) => [
+        ...items,
+        {
+          id: pendingId,
+          title: route.topic || preview.title || preview.source_name || "Linked article",
+          sourceName: targetCase ? `Adding to ${targetCase.topic}` : preview.source_name,
+        },
+      ]);
+      setUrlDialogOpen(false);
+      const newsCase = await runPreviewAnalysis(preview, {
+        topic: targetCase ? targetCase.topic : route.topic,
+        existingSources: targetCase?.sources || [],
+      });
+      onAddCase(newsCase, true, targetCase?.case_id || null);
     } catch (err) {
       setBoardNotice(
         err?.message
-          ? `The source was crawled, but analysis failed: ${err.message}`
-          : "The source was crawled, but analysis failed."
+          ? `The source was crawled, but routing or analysis failed: ${err.message}`
+          : "The source was crawled, but routing or analysis failed."
       );
     } finally {
       setPendingStories((items) => items.filter((item) => item.id !== pendingId));
@@ -221,10 +243,10 @@ export default function Desk({ session, initialVerdicts, onCompose, onExit, onAd
   };
 
   const stack = pending.slice(0, 3);
-  const progress = allClaims.length ? (history.length / allClaims.length) * 100 : 0;
+  const progress = allArticles.length ? (history.length / allArticles.length) * 100 : 0;
   const lastRuled = history[history.length - 1];
   const canUndoHere =
-    history.length > 0 && (!activeCaseId || claimCase[lastRuled]?.case_id === activeCaseId);
+    history.length > 0 && (!activeCaseId || sourceCase[lastRuled]?.case_id === activeCaseId);
 
   const railCases = active ? [active] : cases;
 
@@ -335,7 +357,7 @@ export default function Desk({ session, initialVerdicts, onCompose, onExit, onAd
               <h3 className="done-title">Start with a public article URL.</h3>
               <p className="empty-copy">
                 LiveBrief will crawl the article, show the cleaned text for confirmation,
-                then analyze it into a new story pile.
+                then route it into a matching story deck or create a new one.
               </p>
               {boardNotice && (
                 <p className="form-error empty-error" role="alert">
@@ -349,7 +371,7 @@ export default function Desk({ session, initialVerdicts, onCompose, onExit, onAd
           ) : finished ? (
             <div className="deck-done">
               <p className="kicker">Review complete</p>
-              <h3 className="done-title">Every story has been ruled on.</h3>
+              <h3 className="done-title">Every article has been ruled on.</h3>
               <dl className="done-figures">
                 <div>
                   <dt>Approved</dt>
@@ -395,33 +417,33 @@ export default function Desk({ session, initialVerdicts, onCompose, onExit, onAd
                 </button>
                 <span className="deck-cluster-label">{active.topic}</span>
                 <span className="mono deck-cluster-count">
-                  {ruledInActive}&thinsp;/&thinsp;{active.claims.length}
+                  {ruledInActive}&thinsp;/&thinsp;{active.sources.length}
                 </span>
               </div>
               <div className="card-stack">
-                {stack.map((claim, i) => (
+                {stack.map((article, i) => (
                   <ClaimCard
-                    key={claim.id}
-                    claim={claim}
-                    sourceType={sourceIndex[claim.source_id]?.source.source_type}
-                    sourceUrl={sourceIndex[claim.source_id]?.source.url}
-                    conflict={conflictIndex[active.case_id]?.[claim.group_label] || null}
+                    key={article.id}
+                    article={article}
+                    claims={claimsBySource[article.id] || []}
+                    conflicts={conflictsBySource[article.id] || []}
+                    topic={active.topic}
                     index={ruledInActive + i}
-                    total={active.claims.length}
+                    total={active.sources.length}
                     stackIndex={i}
                     interactive={i === 0}
                     command={i === 0 ? command : null}
                     onDecide={handleDecide}
                     onViewSource={openSource}
                     returning={
-                      returningId && returningId.startsWith(`${claim.id}:`)
+                      returningId && returningId.startsWith(`${article.id}:`)
                         ? returningId.split(":")[1]
                         : null
                     }
                   />
                 ))}
                 {stack.length === 0 && (
-                  <p className="deck-settling mono">Story ruled — returning to the board</p>
+                  <p className="deck-settling mono">Deck ruled — returning to the board</p>
                 )}
               </div>
               <div className="stage-controls">
@@ -439,7 +461,7 @@ export default function Desk({ session, initialVerdicts, onCompose, onExit, onAd
                 <button className="btn-link" onClick={undo} disabled={!canUndoHere}>
                   Undo last ruling
                 </button>
-                <span className="mono stage-hint">drag the card, arrows rule, esc closes</span>
+                <span className="mono stage-hint">drag article cards, arrows rule, esc closes</span>
               </div>
             </div>
           ) : (
@@ -473,7 +495,7 @@ export default function Desk({ session, initialVerdicts, onCompose, onExit, onAd
               </li>
               <li>
                 <span className="tally-dot dot-rest" /> Remaining
-                <span className="mono tally-num">{allClaims.length - history.length}</span>
+                <span className="mono tally-num">{allArticles.length - history.length}</span>
               </li>
             </ul>
           </section>

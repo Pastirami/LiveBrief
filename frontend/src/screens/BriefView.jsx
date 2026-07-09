@@ -4,7 +4,7 @@ import { Typewriter, dateline } from "../bits";
 
 /**
  * The final dispatches — one per story, each composed only from that
- * story's approved claims. Uses the backend generator when reachable;
+ * story's approved article cards. Uses the backend generator when reachable;
  * otherwise a local composer that follows the same no-invention rule.
  */
 export default function BriefView({ session, verdicts, onBackToDesk, onRestart }) {
@@ -16,8 +16,8 @@ export default function BriefView({ session, verdicts, onBackToDesk, onRestart }
     let cancelled = false;
     Promise.all(
       cases.map(async (newsCase) => {
-        const approved = newsCase.claims.filter((c) => verdicts[c.id] === "confirmed");
-        const holds = newsCase.claims.filter((c) => verdicts[c.id] === "to_verify").length;
+        const approved = newsCase.claims.filter((c) => verdicts[c.source_id] === "confirmed");
+        const holds = newsCase.sources.filter((source) => verdicts[source.id] === "to_verify").length;
         const { response, live } = await generateBrief({
           topic: newsCase.topic,
           // The backend generator only uses claims whose own status is

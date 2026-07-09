@@ -35,9 +35,13 @@ export default function App() {
     setScreen("desk");
   }, []);
 
-  const handleAddCase = useCallback((newsCase, live = true) => {
+  const handleAddCase = useCallback((newsCase, live = true, replaceCaseId = null) => {
     setSession((current) => ({
-      cases: [...(current?.cases || []), newsCase],
+      cases: replaceCaseId
+        ? (current?.cases || []).map((item) =>
+            item.case_id === replaceCaseId ? newsCase : item
+          )
+        : [...(current?.cases || []), newsCase],
       live: current?.live ?? live,
       canAddStories: current?.canAddStories ?? true,
     }));

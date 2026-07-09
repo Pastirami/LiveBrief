@@ -79,9 +79,10 @@ Landing ─→ Analyzing ─→ Desk ─→ BriefView
 | BriefView | `screens/BriefView.jsx` | 최종 디스패치: 타자기 렌더링, 사용/제외/보류 수치, 세이프티 노트 |
 
 데모는 `api.js`가 번들된 목 케이스(`mock.js`)를 사용한다. 커스텀 URL 추가는
-백엔드 `/analysis/preview`로 먼저 크롤링/정제 결과를 확인한 뒤, 확인된 본문을
-`/analysis/run`으로 보낸다. 브리프 생성은 API 실패 시 동일한 무발명(no-invention)
-규칙의 로컬 컴포저로 폴백.
+백엔드 `/analysis/preview`로 먼저 크롤링/정제 결과를 확인한 뒤, `/analysis/route`로
+기존 스토리 덱에 붙일지 새 덱을 만들지 결정한다. 확인된 본문은 `/analysis/run`으로
+보낸다. 브리프 생성은 API 실패 시 동일한 무발명(no-invention) 규칙의 로컬 컴포저로
+폴백.
 
 ---
 
@@ -92,7 +93,7 @@ Landing ─→ Analyzing ─→ Desk ─→ BriefView
 ```
 ┌────────────┬──────────────────────┬────────────┐
 │ 소스 온 파일 │        STAGE         │ 진행 드래프트 │
-│ 컨플릭트 알림 │  케이스 보드 ↔ 스와이프 덱 │  데스크 탤리  │
+│ 컨플릭트 알림 │  케이스 보드 ↔ 기사 카드 덱 │  데스크 탤리  │
 └────────────┴──────────────────────┴────────────┘
 ```
 
@@ -109,8 +110,9 @@ Landing ─→ Analyzing ─→ Desk ─→ BriefView
 
 ## 6. 케이스 보드 (토픽 클러스터)
 
-`screens/ClusterField.jsx`. 클레임을 `group_label` 기준으로 클러스터링해
-**주제별 카드 더미(pile)** 로 스테이지에 흩어 놓는다.
+`screens/ClusterField.jsx`. 유사한 주제의 기사들을 **스토리 덱(pile)** 으로
+스테이지에 흩어 놓는다. 현재 라우팅은 AI가 담당하고, 추후 텍스트 임베딩 모델 API로
+교체할 수 있게 백엔드 `ArticleDeckRouter`에 모아 둔다.
 
 - **배치**: 미리 정의된 8개 슬롯(% 좌표)에 순서대로. 더미당 `--tilt`
   (-2.4°~2.4°)로 손으로 놓은 느낌.
@@ -126,13 +128,14 @@ Landing ─→ Analyzing ─→ Desk ─→ BriefView
 | `deal-in` | 보드 최초 진입(세션당 1회) | 더미들이 위(-38vh)에서 120ms 간격 스태거로 낙하·감속 착지 후 부유 시작 |
 | pick-up | 더미 클릭 | 선택 더미 1.14배 리프트 + 그림자 확대, 나머지는 220ms 페이드아웃 → 240ms 뒤 덱으로 전환 |
 | `deck-grow` | 덱 마운트 | 클릭한 더미의 실좌표(`--from-x/y`)에서 scale 0.24 → 1.0, 미세 오버슈트 이징 |
-| settle-back | 더미의 마지막 클레임 판정 | "PILE RULED — RETURNING TO THE BOARD" 600ms 후 보드 복귀 |
+| settle-back | 더미의 마지막 기사 카드 판정 | "DECK RULED — RETURNING TO THE BOARD" 600ms 후 보드 복귀 |
 
 ---
 
-## 7. 클레임 카드와 스와이프
+## 7. 기사 카드와 스와이프
 
-`screens/ClaimCard.jsx`. Pointer Events 기반 자체 드래그 물리.
+`screens/ClaimCard.jsx`. 파일명은 유지하지만 실제 카드 단위는 **기사 1개**다.
+Pointer Events 기반 자체 드래그 물리.
 
 - **드래그**: `translate(dx, dy) rotate(dx/16deg)`, 드래그 중 transition 해제.
 - **임계값**: 가로 100px(승인/기각), 세로 아래 96px(보류, 수직 우세일 때만).
@@ -148,10 +151,10 @@ Landing ─→ Analyzing ─→ Desk ─→ BriefView
   보드/완료 화면에서 언두하면 해당 클러스터 덱이 자동으로 다시 열린다.
 - **키보드 맵**: `→` 승인 · `←` 기각 · `↓` 보류 · `z`/`u`/`Backspace` 언두 ·
   `Esc` 보드로 복귀.
-- **카드 구조** (위→아래): 그룹 키커 + `nn / mm` 카운트(잉크 2px 룰로 구분) →
-  리스크/contested 뱃지 → 클레임 헤드라인(세리프) → 근거 인용 블록 → (있으면)
-  컨플릭트 스트립(제목, 값 대조 — 이 카드의 값에 빨간 밑줄, 권고문) → 푸터
-  (소스명·타입·시각·장소 / 신뢰도 카운트업 % + 3밴드 컬러 미터).
+- **카드 구조** (위→아래): Article on file 키커 + `nn / mm` 카운트 →
+  리스크/claim count/contested 뱃지 → 출처명 → 정제된 기사 본문 발췌 →
+  이 기사에서 추출된 claim 목록 → (있으면) 이 기사와 연결된 컨플릭트 스트립 →
+  푸터(스토리명·타입 / 평균 추출 신뢰도 카운트업 % + 3밴드 컬러 미터).
 
 ---
 
@@ -203,13 +206,13 @@ frontend/
       Desk.jsx          검증 데스크(판정 상태 소유)
       UrlStoryDialog.jsx URL-only 크롤링 미리보기 + 분석 추가
       ClusterField.jsx  케이스 보드(토픽 더미)
-      ClaimCard.jsx     스와이프 카드(드래그 물리)
+      ClaimCard.jsx     기사 스와이프 카드(드래그 물리)
       BriefView.jsx     최종 디스패치
 ```
 
-상태 소유권: 판정(`verdicts`)과 판정 이력(`history`)은 전부 **Desk**가 갖는다.
-백엔드에는 상태 저장 API가 없으므로(무상태), 브리프 생성 시 승인 클레임만
-`POST /analysis/brief`로 보낸다.
+상태 소유권: 기사 카드 판정(`verdicts`, source id → status)과 판정 이력(`history`)은
+전부 **Desk**가 갖는다. 백엔드에는 상태 저장 API가 없으므로(무상태), 브리프 생성 시
+승인된 기사에 속한 claim만 `POST /analysis/brief`로 보낸다.
 
 ---
 

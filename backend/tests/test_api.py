@@ -85,6 +85,53 @@ def test_preview_endpoint_returns_clean_article_metadata(monkeypatch):
     assert "Officials closed" in payload["excerpt"]
 
 
+def test_route_endpoint_matches_article_to_existing_deck(monkeypatch):
+    monkeypatch.setattr(analysis.article_router.settings, "openai_api_key", None)
+
+    response = client.post(
+        "/api/v1/analysis/route",
+        json={
+            "article": {
+                "url": "https://example.com/new",
+                "final_url": "https://example.com/new",
+                "source_name": "Example News",
+                "title": "Storm damage keeps harbour closed",
+                "text": "Storm damage kept the harbour closed while repairs continued.",
+                "excerpt": "Storm damage kept the harbour closed while repairs continued.",
+                "word_count": 9,
+            },
+            "decks": [
+                {
+                    "case_id": "deck-1",
+                    "topic": "Harbour closure after storm damage",
+                    "source_count": 1,
+                    "source_names": ["Port desk"],
+                    "excerpts": ["Officials closed the harbour after storm damage."],
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["target_case_id"] == "deck-1"
+    assert payload["topic"] == "Harbour closure after storm damage"
+
+
+def test_lan_vite_origin_is_allowed_by_cors():
+    response = client.options(
+        "/api/v1/analysis/preview",
+        headers={
+            "Origin": "http://10.68.253.211:5174",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://10.68.253.211:5174"
+
+
 def test_private_network_url_is_blocked():
     service = ArticleIngestionService()
 
