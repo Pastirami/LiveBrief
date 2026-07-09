@@ -24,7 +24,7 @@ def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(
         title=settings.app_name,
-        version="0.1.0",
+        version="1.0.0",
         summary="Backend API for the LiveBrief newsroom verification workflow.",
         description=(
             "LiveBrief compares multiple breaking-news sources, highlights conflicting "

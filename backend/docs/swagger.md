@@ -31,7 +31,9 @@ Example response:
 {
   "status": "ok",
   "service": "LiveBrief API",
-  "environment": "development"
+  "environment": "development",
+  "analysis_mode": "ai",
+  "ai_configured": true
 }
 ```
 
@@ -84,8 +86,9 @@ Request body:
 }
 ```
 
-The backend intentionally does not decide which claim is true. The frontend should
-send only claims that the journalist approved or explicitly marked for inclusion.
+The backend intentionally does not decide which claim is true. AI-extracted claims
+start as `to_verify`. The frontend must send the journalist's updated statuses;
+the brief endpoint includes only `confirmed` or `add_to_brief` claims.
 
 ## Integration Notes
 
@@ -93,4 +96,6 @@ send only claims that the journalist approved or explicitly marked for inclusion
 - Display `claim.evidence` near every extracted claim so editors can audit the source text.
 - Treat `conflicts[].recommendation` as guidance, not as automated truth.
 - Do not publish claims with status `to_verify` unless the journalist changes the status.
+- Public article URLs must use HTTP(S). Local and private network destinations are blocked.
+- Up to 10 articles can be analyzed per request by default.
 - CORS defaults allow Vite frontend origins `http://localhost:5174` and `http://127.0.0.1:5174`.

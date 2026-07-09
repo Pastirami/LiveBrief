@@ -13,9 +13,9 @@ from app.utils.text import stable_id
 class AnalysisPipeline:
     def __init__(self, extractor_mode: str | None = None) -> None:
         self.settings = get_settings()
-        self.ingestion = ArticleIngestionService()
+        self.ingestion = ArticleIngestionService(self.settings)
         self.extractor_mode = extractor_mode or self.settings.extractor_mode
-        self.extractor = self._build_extractor()
+        self.extractor = None
         self.grouping = EventGroupingService()
         self.conflicts = ConflictDetector()
         self.briefs = BriefGenerator()
@@ -27,7 +27,8 @@ class AnalysisPipeline:
 
     def analyze(self, request: AnalyzeRequest) -> AnalysisResult:
         sources = self.ingestion.ingest(request)
-        claims = self.extractor.extract(sources)
+        extractor = self.extractor or self._build_extractor()
+        claims = extractor.extract(sources)
         groups = self.grouping.group(claims)
         conflicts = self.conflicts.detect(groups)
         timeline = sorted(
@@ -38,7 +39,7 @@ class AnalysisPipeline:
         return AnalysisResult(
             case_id=stable_id(request.topic, str(len(sources)), "".join(source.id for source in sources)),
             topic=request.topic,
-            analysis_mode="rule_based" if isinstance(self.extractor, RuleBasedEventExtractor) else "ai",
+            analysis_mode="rule_based" if isinstance(extractor, RuleBasedEventExtractor) else "ai",
             sources=sources,
             claims=claims,
             groups=groups,

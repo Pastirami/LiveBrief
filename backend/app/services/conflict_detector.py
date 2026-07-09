@@ -1,3 +1,5 @@
+from typing import Literal
+
 from app.schemas.analysis import ConflictAlert, EventGroup
 
 
@@ -8,8 +10,12 @@ class ConflictDetector:
         for group in groups:
             if group.id == "casualty_count":
                 alerts.extend(self._casualty_alerts(group, has_unverified))
-            if group.id == "event_time":
+            elif group.id == "event_time":
                 alerts.extend(self._time_alerts(group))
+            elif group.status == "conflict":
+                alerts.append(self._general_alert(group, "high"))
+            elif group.status == "needs_review" and group.id in {"location", "cause"}:
+                alerts.append(self._general_alert(group, "medium"))
         return alerts
 
     def _casualty_alerts(
@@ -47,3 +53,19 @@ class ConflictDetector:
                 recommendation="Use approximate wording until an official timestamp is confirmed.",
             )
         ]
+
+    def _general_alert(
+        self,
+        group: EventGroup,
+        severity: Literal["high", "medium"],
+    ) -> ConflictAlert:
+        values = sorted({claim.value for claim in group.claims})
+        return ConflictAlert(
+            id=f"{group.id}-mismatch",
+            group_id=group.id,
+            severity=severity,
+            title=f"{group.label} mismatch",
+            summary=f"Sources provide different values for {group.label.lower()}.",
+            conflicting_values=values,
+            recommendation="Keep attribution and avoid asserting one version until editorial verification.",
+        )

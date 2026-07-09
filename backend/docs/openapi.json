@@ -4,7 +4,7 @@
     "title": "LiveBrief API",
     "summary": "Backend API for the LiveBrief newsroom verification workflow.",
     "description": "LiveBrief compares multiple breaking-news sources, highlights conflicting claims, and generates final copy only from journalist-approved facts.",
-    "version": "0.1.0"
+    "version": "1.0.0"
   },
   "paths": {
     "/api/v1/health": {
@@ -21,7 +21,14 @@
               "application/json": {
                 "schema": {
                   "additionalProperties": {
-                    "type": "string"
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "boolean"
+                      }
+                    ]
                   },
                   "type": "object",
                   "title": "Response Health Check Api V1 Health Get"
@@ -148,6 +155,14 @@
             "type": "string",
             "title": "Topic"
           },
+          "analysis_mode": {
+            "type": "string",
+            "enum": [
+              "ai",
+              "rule_based"
+            ],
+            "title": "Analysis Mode"
+          },
           "sources": {
             "items": {
               "$ref": "#/components/schemas/SourceDocument"
@@ -192,6 +207,7 @@
         "required": [
           "case_id",
           "topic",
+          "analysis_mode",
           "sources",
           "claims",
           "groups",
@@ -205,6 +221,8 @@
         "properties": {
           "topic": {
             "type": "string",
+            "maxLength": 240,
+            "minLength": 3,
             "title": "Topic",
             "examples": [
               "Explosion reported near Central Station"
@@ -215,6 +233,7 @@
               "$ref": "#/components/schemas/ArticleInput"
             },
             "type": "array",
+            "maxItems": 10,
             "minItems": 1,
             "title": "Articles"
           }
@@ -230,6 +249,8 @@
         "properties": {
           "source_name": {
             "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
             "title": "Source Name",
             "examples": [
               "Source A"
@@ -238,7 +259,8 @@
           "text": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 100000
               },
               {
                 "type": "null"

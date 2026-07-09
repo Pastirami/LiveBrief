@@ -21,5 +21,16 @@ def test_brief_generator_uses_only_approved_claims():
     response = BriefGenerator().generate(result.topic, approved_claims)
 
     assert response.used_claim_ids
-    assert "journalist-approved" in response.brief
+    assert set(response.used_claim_ids) == {claim.id for claim in approved_claims}
+    assert not response.excluded_claim_ids
     assert "twelve" not in response.brief.lower()
+
+
+def test_brief_generator_is_topic_agnostic():
+    result = AnalysisPipeline(extractor_mode="rule").analyze(get_sample_case())
+    approved = [claim.model_copy(update={"claim": "A source confirmed a transport disruption."}) for claim in result.claims[:1]]
+
+    response = BriefGenerator().generate("Transport disruption", approved)
+
+    assert "transport disruption" in response.brief.lower()
+    assert "Central Station" not in response.brief

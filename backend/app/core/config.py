@@ -14,6 +14,11 @@ class Settings:
     default_model: str = getenv("DEFAULT_MODEL", "gpt-4.1-mini")
     openai_api_key: str | None = getenv("OPENAI_API_KEY")
     extractor_mode: str = getenv("EXTRACTOR_MODE", "ai").lower()
+    request_timeout_seconds: float = float(getenv("REQUEST_TIMEOUT_SECONDS", "45"))
+    article_timeout_seconds: float = float(getenv("ARTICLE_TIMEOUT_SECONDS", "20"))
+    max_articles: int = int(getenv("MAX_ARTICLES", "10"))
+    max_article_chars: int = int(getenv("MAX_ARTICLE_CHARS", "50000"))
+    max_download_bytes: int = int(getenv("MAX_DOWNLOAD_BYTES", "5000000"))
     cors_origins: list[str] = [
         origin.strip()
         for origin in getenv(

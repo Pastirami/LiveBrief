@@ -1,6 +1,6 @@
 # LiveBrief Backend
 
-FastAPI backend for the LiveBrief newsroom verification workflow.
+Production-oriented FastAPI backend for the LiveBrief newsroom verification workflow.
 
 ## Structure
 
@@ -51,13 +51,31 @@ http://127.0.0.1:8000/openapi.json
 - `POST /api/v1/analysis/run`
 - `POST /api/v1/analysis/brief`
 
+## What Is Implemented
+
+- Public HTTP(S) article download with redirects, timeouts, size limits, and SSRF protection
+- Article-body extraction with Trafilatura and a BeautifulSoup fallback
+- OpenAI Responses API extraction with strict JSON Schema output
+- Source-grounded claims, evidence, confidence, risk, grouping, and conflict alerts
+- Journalist-controlled claim approval: AI-extracted claims always start as `to_verify`
+- Deterministic final copy assembled only from approved claim text
+- CORS, request validation, safe API errors, health/readiness metadata, and OpenAPI docs
+
 ## Frontend Integration Flow
 
-1. Call `GET /api/v1/analysis/demo` to load the sample case.
-2. Send edited sources to `POST /api/v1/analysis/run`.
-3. Render `claims`, `groups`, `conflicts`, and `timeline`.
-4. Let the journalist change each claim status.
-5. Send approved claims to `POST /api/v1/analysis/brief`.
+1. Send public article URLs or pasted source text to `POST /api/v1/analysis/run`.
+2. Render `claims`, `groups`, `conflicts`, and `timeline`.
+3. Let the journalist change each claim status.
+4. Send approved claims to `POST /api/v1/analysis/brief`.
 
-The current extractor is deterministic and rule-based for stable demos. Replace
-`RuleBasedEventExtractor` with an AI-backed extractor when API keys are ready.
+Set `EXTRACTOR_MODE=ai` for real OpenAI extraction or `EXTRACTOR_MODE=rule` for
+offline deterministic demos and tests. Never expose `backend/.env` or the API key
+to the frontend.
+
+## Verification
+
+```bash
+cd backend
+.venv/bin/pytest -q tests
+.venv/bin/python scripts/test_openai_key.py
+```
