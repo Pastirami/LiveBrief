@@ -1,0 +1,58 @@
+{
+  "articles": [
+    {
+      "url": "https://www.internazionale.it/ultime-notizie-reuters/2026/07/09/greek-firefighters-battle-fire-at-business-site-at-least-two-injured",
+      "title": "Greek firefighters battle fire at business site, at least two injured - Internazionale",
+      "text": "ATHENS, July 9 (Reuters) - Greek firefighters on Thursday were battling a fire which broke out at a business premises some 15 km (9 miles) northwest of Athens, seriously wounding at least two people, the fire brigade said. About 75 firefighters assisted by 20 engines, vehicles and a helicopter had been deployed at the site, tackling the blaze which broke out early in the morning, sending a plume of black smoke into the sky. One severely injured man has been rescued, the fire brigade said. Earlier, another man who suffered serious burns was taken to hospital. Public broadcaster ERT said that four more people were being treated for injuries. Authorities have urged people to vacate the area. The fire brigade said a fuel truck was inside the business premises, but one fire brigade official said it was most likely empty. (Reporting by Renee Maltezou; Editing by Alexandra Hudson) ATENE, 9 luglio (Reuters) - Giovedì i vigili del fuoco greci hanno combattuto un incendio divampato in un locale commerciale a circa 15 km (9 miglia) a nord-ovest di Atene, che ha ferito gravemente almeno due persone, secondo quanto riferito dai vigili del fuoco. Circa 75 vigili del fuoco, coadiuvati da 20 autopompe, veicoli e un elicottero, sono stati dispiegati sul posto per domare le fiamme divampate nelle prime ore del mattino, che hanno sollevato una colonna di fumo nero verso il cielo. Un uomo gravemente ferito è stato tratto in salvo, ha riferito il corpo dei vigili del fuoco. In precedenza, un altro uomo che aveva riportato gravi ustioni era stato trasportato in ospedale. L’emittente pubblica ERT ha riferito che altre quattro persone erano in cura per le ferite riportate. Le autorità hanno esortato la popolazione ad allontanarsi dalla zona. I vigili del fuoco hanno dichiarato che all’interno dei locali commerciali era presente un’autocisterna, ma secondo un funzionario dei vigili del fuoco era molto probabile che fosse vuota. (Reporter Renee Maltezou; Editor Alexandra Hudson)",
+      "domain": "www.internazionale.it",
+      "published_at": "2026-07-09T09:45:04+02:00"
+    }
+  ],
+  "clustered_articles": [
+    {
+      "url": "https://www.internazionale.it/ultime-notizie-reuters/2026/07/09/greek-firefighters-battle-fire-at-business-site-at-least-two-injured",
+      "title": "Greek firefighters battle fire at business site, at least two injured - Internazionale",
+      "domain": "www.internazionale.it",
+      "cluster_id": 0,
+      "top_terms": [
+        "che",
+        "hanno",
+        "brigade",
+        "riferito",
+        "le",
+        "ha"
+      ],
+      "preview": "ATHENS, July 9 (Reuters) - Greek firefighters on Thursday were battling a fire which broke out at a business premises some 15 km (9 miles) northwest of Athens, seriously wounding at least two people, the fire brigade sai..."
+    }
+  ],
+  "summary": {
+    "clusters": {
+      "0": [
+        "https://www.internazionale.it/ultime-notizie-reuters/2026/07/09/greek-firefighters-battle-fire-at-business-site-at-least-two-injured"
+      ]
+    },
+    "top_terms": {
+      "0": [
+        "che",
+        "hanno",
+        "brigade",
+        "riferito",
+        "le",
+        "ha"
+      ]
+    },
+    "cluster_labels": {
+      "0": "che / hanno / brigade | Greek firefighters battle fire at business site, at least two injured - Internazionale"
+    }
+  },
+  "errors": [
+    {
+      "url": "https://www.reuters.com/world/greek-firefighters-battle-fire-business-site-least-two-injured-2026-07-09/",
+      "error": "401 Client Error: HTTP Forbidden for url: https://www.reuters.com/world/greek-firefighters-battle-fire-business-site-least-two-injured-2026-07-09/"
+    },
+    {
+      "url": "https://www.globalbankingandfinance.com/greek-firefighters-battle-fire-business-site-least-two/",
+      "error": "Empty extracted text"
+    }
+  ]
+}
