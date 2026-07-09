@@ -10,7 +10,12 @@ async function request(path, options = {}, timeoutMs = 30000) {
     const res = await fetch(`${API_BASE}${path}`, {
       ...options,
       signal: controller.signal,
-      headers: { "Content-Type": "application/json", ...options.headers },
+      headers: {
+        "Content-Type": "application/json",
+        // Skips ngrok's free-tier browser interstitial; harmless elsewhere.
+        "ngrok-skip-browser-warning": "true",
+        ...options.headers,
+      },
     });
     if (!res.ok) {
       let detail = `${res.status}`;
