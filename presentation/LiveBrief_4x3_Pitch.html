@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>LiveBrief 4:3 Pitch</title>
+  <style>
+    @page { size: 10in 7.5in; margin: 0; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #f5f2ea; color: #1c1913; font-family: Georgia, serif; }
+    .slide {
+      width: 10in;
+      height: 7.5in;
+      page-break-after: always;
+      padding: 0.34in 0.42in;
+      position: relative;
+      overflow: hidden;
+      background: #f5f2ea;
+    }
+    .top {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1.5px solid #1c1913;
+      padding-bottom: 0.11in;
+      font: 800 8px Arial, sans-serif;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .top span:last-child { color: #a41e1e; }
+    .kicker {
+      margin-top: 0.34in;
+      color: #a41e1e;
+      font: 800 9px Arial, sans-serif;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    h1 { margin: 0.18in 0 0; font-size: 38px; line-height: 0.98; letter-spacing: -0.02em; }
+    h2 { margin: 0.16in 0 0; font-size: 31px; line-height: 1.02; letter-spacing: -0.015em; }
+    p { margin: 0; color: #5c5445; font-size: 18px; line-height: 1.28; }
+    .num { position: absolute; right: 0.45in; bottom: 0.25in; color: #5c5445; font: 9px Arial, sans-serif; }
+    .rule { width: 4in; height: 2px; background: #a41e1e; margin: 0.22in 0; }
+    .badges { display: flex; gap: 0.15in; margin-top: 0.32in; }
+    .badge {
+      border: 1.2px solid currentColor;
+      padding: 0.07in 0.12in;
+      font: 800 7px Arial, sans-serif;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .red { color: #a41e1e; } .green { color: #23603b; } .amber { color: #8a5f14; }
+    .img {
+      border: 1px solid #cfc8b6;
+      box-shadow: 0 8px 20px rgba(28,25,19,0.12);
+      background: #fdfbf5;
+      object-fit: cover;
+    }
+    .left { position: absolute; left: 0.55in; top: 1.05in; width: 4.1in; }
+    .right-img { position: absolute; right: 0.55in; top: 1.25in; width: 4.35in; height: 2.72in; object-fit: contain; }
+    .wide-img { position: absolute; right: 0.5in; top: 1in; width: 5.25in; height: 5.65in; }
+    .arch { position: absolute; left: 0.65in; top: 2.25in; width: 8.7in; height: 3.95in; object-fit: cover; }
+    .list { display: grid; gap: 0.13in; margin-top: 0.35in; }
+    .item { display: grid; grid-template-columns: 0.16in 1fr; gap: 0.1in; font: 14px Arial, sans-serif; }
+    .item::before { content: ""; width: 0.08in; height: 0.08in; margin-top: 0.05in; background: #a41e1e; }
+    .mini {
+      border: 1.2px solid #1c1913;
+      background: #fdfbf5;
+      padding: 0.14in 0.18in;
+      min-height: 0.78in;
+    }
+    .mini strong { font-size: 21px; line-height: 1; }
+    .mini small { display: block; margin-top: 0.05in; color: #5c5445; font: 11px Arial, sans-serif; }
+    .mini-stack { position: absolute; right: 0.8in; top: 1.25in; width: 3.7in; display: grid; gap: 0.42in; }
+    .steps { position: absolute; left: 0.65in; top: 3in; display: grid; grid-template-columns: repeat(3, 2.45in); gap: 0.22in 0.45in; }
+    .step { border: 1.2px solid #1c1913; background: #fdfbf5; padding: 0.17in; font: 800 16px Arial, sans-serif; }
+    .step span { color: #a41e1e; margin-right: 0.16in; font-size: 9px; }
+  </style>
+</head>
+<body>
+  <section class="slide">
+    <div class="top"><span>LiveBrief</span><span>Breaking News Verification</span></div>
+    <div class="left">
+      <div class="kicker">AI-assisted editorial verification</div>
+      <h1>Verify before<br />you publish.</h1>
+      <div class="rule"></div>
+      <p><strong>Story decks. Article cards. Human verdicts.</strong></p>
+      <div class="badges"><span class="badge red">local embeddings</span><span class="badge green">source claims</span><span class="badge amber">editor control</span></div>
+    </div>
+    <img class="img right-img" src="assets/livebrief_landing.png" />
+    <div class="num">01</div>
+  </section>
+
+  <section class="slide">
+    <div class="top"><span>LiveBrief</span><span>The Problem</span></div>
+    <div class="left">
+      <div class="kicker">Summaries can hide risk</div>
+      <h2>Breaking news is<br />a comparison problem.</h2>
+      <div class="list"><div class="item">Counts disagree</div><div class="item">Causes are unverified</div><div class="item">Timelines change</div></div>
+    </div>
+    <div class="mini-stack"><div class="mini"><strong>2 injured</strong><small>Official source</small></div><div class="mini"><strong>6 injured</strong><small>Local media</small></div><div class="mini"><strong>10+ unverified</strong><small>Social posts</small></div></div>
+    <p style="position:absolute;left:.65in;bottom:1.05in;color:#a41e1e;font-weight:700">LiveBrief keeps disagreement visible.</p>
+    <div class="num">02</div>
+  </section>
+
+  <section class="slide">
+    <div class="top"><span>LiveBrief</span><span>Product Flow</span></div>
+    <div class="kicker">One URL becomes one card</div>
+    <h2>From source<br />to approved brief.</h2>
+    <div class="steps"><div class="step"><span>01</span>Crawl URL</div><div class="step"><span>02</span>Clean text</div><div class="step"><span>03</span>Route deck</div><div class="step"><span>04</span>Review card</div><div class="step"><span>05</span>Compose brief</div></div>
+    <p style="position:absolute;left:.65in;bottom:1.1in">Local open-source embeddings group similar articles. No external embedding API.</p>
+    <div class="num">03</div>
+  </section>
+
+  <section class="slide">
+    <div class="top"><span>LiveBrief</span><span>Demo Board</span></div>
+    <div class="left"><div class="kicker">Story decks</div><h2>Similar articles<br />land together.</h2><div class="list"><div class="item">One deck = one story</div><div class="item">One card = one article</div><div class="item">Routing shows the target</div></div></div>
+    <img class="img wide-img" src="assets/livebrief_board.png" />
+    <div class="num">04</div>
+  </section>
+
+  <section class="slide">
+    <div class="top"><span>LiveBrief</span><span>Article Review</span></div>
+    <div class="left"><div class="kicker">Human verdict</div><h2>Confidence is extraction certainty.<br />Risk is editorial caution.</h2><div class="list"><div class="item">Approve: eligible</div><div class="item">Hold: returns for review</div><div class="item">Discard: excluded</div></div></div>
+    <img class="img wide-img" src="assets/livebrief_card.png" />
+    <div class="num">05</div>
+  </section>
+
+  <section class="slide">
+    <div class="top"><span>LiveBrief</span><span>Technical Architecture</span></div>
+    <div class="kicker">FastAPI backend</div><h2>Local embeddings<br />plus editorial safeguards.</h2>
+    <img class="img arch" src="assets/livebrief_architecture_4x3.png" />
+    <div class="num">06</div>
+  </section>
+
+  <section class="slide">
+    <div class="top"><span>LiveBrief</span><span>Why Journalists Use It</span></div>
+    <div class="left"><div class="kicker">Faster without giving up judgment</div><h1>AI compares.<br />Journalists decide.</h1></div>
+    <div class="mini-stack"><div class="mini"><strong>Speed</strong><small>Sort sources into story decks.</small></div><div class="mini"><strong>Accountability</strong><small>Trace every claim to source text.</small></div><div class="mini"><strong>Safety</strong><small>Briefs use approved claims only.</small></div></div>
+    <p style="position:absolute;left:.65in;bottom:1.15in;color:#a41e1e;font-weight:700">A sharper verification desk for deadline news.</p>
+    <div class="num">07</div>
+  </section>
+</body>
+</html>
